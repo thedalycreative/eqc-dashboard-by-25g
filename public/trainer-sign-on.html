@@ -150,34 +150,43 @@
           topics: formData.get('topics') || 'Class in session'
         };
 
+        const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms));
+
         const staffId = Date.now();
-        await setDoc(doc(db, 'staff', 'staff_' + staffId), {
-          name: payload.name,
-          room: room,
-          course: course,
-          intake: payload.intake || '',
-          topics: payload.topics,
-          id: String(staffId),
-          timestamp: new Date().toISOString()
-        });
+        await Promise.race([
+          setDoc(doc(db, 'staff', 'staff_' + staffId), {
+            name: payload.name,
+            room: room,
+            course: course,
+            intake: payload.intake || '',
+            topics: payload.topics,
+            id: String(staffId),
+            timestamp: new Date().toISOString()
+          }),
+          timeout(10000)
+        ]);
 
         const roomNum = parseInt(room.replace('Room ', ''));
         const roomId = (!isNaN(roomNum) && roomNum >= 1 && roomNum <= 6) ? roomNum : staffId;
-        await setDoc(doc(db, 'rooms', 'room_' + roomId), {
-          id: roomId,
-          roomName: room,
-          status: 'live',
-          course: course,
-          trainer: payload.name,
-          intake: payload.intake || '',
-          topic: payload.topics
-        });
+        await Promise.race([
+          setDoc(doc(db, 'rooms', 'room_' + roomId), {
+            id: roomId,
+            roomName: room,
+            status: 'live',
+            course: course,
+            trainer: payload.name,
+            intake: payload.intake || '',
+            topic: payload.topics
+          }),
+          timeout(10000)
+        ]);
 
         document.getElementById('success-details').textContent = payload.name + ' - ' + room + ' - ' + course;
         document.getElementById('form-container').classList.add('hidden');
         document.getElementById('success-message').classList.remove('hidden');
       } catch (err) {
-        errorEl.textContent = 'Failed to sign on. Please try again or contact admin.';
+        console.error('Sign-on error:', err);
+        errorEl.textContent = 'Failed to sign on: ' + (err.message || 'Unknown error. Please try again.');
         errorEl.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;

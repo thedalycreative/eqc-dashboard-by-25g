@@ -39,7 +39,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { db } from './firebase';
-import { collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
 // --- Types ---
 
@@ -422,17 +422,12 @@ const AdminHub = ({
       setLoginError("Admin panel is disabled in this static preview. Visit the live site to make changes.");
       return;
     }
-    try {
-      const configDoc = await getDoc(doc(db, 'config', 'admin'));
-      const adminPassword = configDoc.exists() ? configDoc.data().password : 'admin';
-      if (password === adminPassword) {
-        setIsLoggedIn(true);
-        setLoginError("");
-      } else {
-        setLoginError("Invalid password. Please try again.");
-      }
-    } catch (err) {
-      setLoginError("Could not verify password. Try again in a moment.");
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin';
+    if (password === adminPassword) {
+      setIsLoggedIn(true);
+      setLoginError("");
+    } else {
+      setLoginError("Invalid password. Please try again.");
     }
   };
 
