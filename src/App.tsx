@@ -422,7 +422,7 @@ const AdminHub = ({
       setLoginError("Admin panel is disabled in this static preview. Visit the live site to make changes.");
       return;
     }
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin';
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'asdf';
     if (password === adminPassword) {
       setIsLoggedIn(true);
       setLoginError("");
