@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
+    "build:pages": "VITE_BASE_PATH=/eqc-perth-campus-dashboard/ VITE_DEMO_MODE=true vite build",
     "start": "NODE_ENV=production tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",

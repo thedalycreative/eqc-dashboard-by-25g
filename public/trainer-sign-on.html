@@ -69,11 +69,8 @@
           <label class="block text-sm font-bold text-gray-700 mb-2">Course *</label>
           <select name="course" required class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 ring-eqc-green focus:border-transparent outline-none transition-shadow" onchange="handleCourseChange(this)">
             <option value="">Select a course...</option>
-            <option value="BSB50120 - Diploma of Business">BSB50120 - Diploma of Business</option>
-            <option value="BSB60120 - Advanced Diploma of Business">BSB60120 - Advanced Diploma of Business</option>
-            <option value="ICT50220 - Diploma of IT">ICT50220 - Diploma of IT</option>
-            <option value="SIT50422 - Diploma of Hospitality Management">SIT50422 - Diploma of Hospitality Management</option>
-            <option value="BSB80120 - Graduate Diploma of Management">BSB80120 - Graduate Diploma of Management</option>
+            <option value="Cyber Security">Cyber Security</option>
+            <option value="Back End Web Dev">Back End Web Dev</option>
             <option value="other">Other (specify)</option>
           </select>
           <input type="text" name="customCourse" id="custom-course" class="hidden w-full p-3 border border-gray-200 rounded-xl mt-2 focus:ring-2 ring-eqc-green focus:border-transparent outline-none" placeholder="Enter course name" />
@@ -139,6 +136,19 @@
           intake: formData.get('intake'),
           topics: formData.get('topics') || 'Class in session'
         };
+
+        // Detect static-preview deploys (e.g. GitHub Pages) where there's no
+        // backend to post to. The check is: try a HEAD on /api/admin-login;
+        // if it 404s with HTML we're on a static host.
+        const probe = await fetch('/api/admin-login', { method: 'HEAD' }).catch(() => null);
+        const isStaticPreview = !probe || probe.status === 404;
+        if (isStaticPreview) {
+          errorEl.textContent = 'This is a static preview of the dashboard. Visit the live site to sign on.';
+          errorEl.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Sign On & Update Board';
+          return;
+        }
 
         const res = await fetch('/api/staff-signon', {
           method: 'POST',

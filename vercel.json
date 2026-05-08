@@ -1,0 +1,13 @@
+{
+  "build": {
+    "env": {
+      "VITE_DEMO_MODE": "true"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

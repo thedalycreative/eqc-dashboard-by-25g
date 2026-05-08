@@ -87,9 +87,24 @@ interface WeatherDay {
   condition: 'sunny' | 'rainy' | 'cloudy' | 'partly-cloudy';
 }
 
+// --- Demo / Static Mode ---
+// When VITE_DEMO_MODE is set (e.g. for GitHub Pages preview deploys), the
+// frontend runs without a backend: no Socket.IO, no admin/sign-on writes.
+// The lobby UI renders against seeded data so previews look complete.
+
+const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const TRAINER_SIGN_ON_URL = `${import.meta.env.BASE_URL}trainer-sign-on.html`;
+
 // --- Mock Data ---
 
-const INITIAL_ROOMS: RoomAllocation[] = [
+const INITIAL_ROOMS: RoomAllocation[] = IS_DEMO_MODE ? [
+  { id: 1, roomName: 'Room 1', status: 'live', course: 'BSB50120 - Diploma of Business', trainer: 'Sarah Johnson', intake: 'Jan 2026', topic: 'Marketing Fundamentals' },
+  { id: 2, roomName: 'Room 2', status: 'live', course: 'ICT50220 - Diploma of IT', trainer: 'David Chen', intake: 'Mar 2026', topic: 'Cloud Architecture' },
+  { id: 3, roomName: 'Room 3', status: 'break' },
+  { id: 4, roomName: 'Room 4', status: 'live', course: 'SIT50422 - Hospitality', trainer: 'Maria Lopez', intake: 'Feb 2026', topic: 'Service Excellence' },
+  { id: 5, roomName: 'Room 5', status: 'available' },
+  { id: 6, roomName: 'Room 6', status: 'available' },
+] : [
   { id: 1, roomName: 'Room 1', status: 'available' },
   { id: 2, roomName: 'Room 2', status: 'available' },
   { id: 3, roomName: 'Room 3', status: 'available' },
@@ -494,6 +509,10 @@ const AdminHub = ({
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
+    if (IS_DEMO_MODE) {
+      setLoginError("Admin panel is disabled in this static preview. Visit the live site to make changes.");
+      return;
+    }
     try {
       const res = await fetch("/api/admin-login", {
         method: "POST",
@@ -513,6 +532,7 @@ const AdminHub = ({
   };
 
   const updateRooms = async (newRooms: RoomAllocation[]) => {
+    if (IS_DEMO_MODE) return;
     await fetch("/api/update-rooms", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -521,6 +541,7 @@ const AdminHub = ({
   };
 
   const updateEvents = async (newEvent: Partial<Event>, action: 'update_single' | 'delete') => {
+    if (IS_DEMO_MODE) return;
     await fetch("/api/update-events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -529,6 +550,7 @@ const AdminHub = ({
   };
 
   const updateAnnouncements = async (data: any, action: 'add' | 'delete') => {
+    if (IS_DEMO_MODE) return;
     await fetch("/api/update-announcements", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -598,12 +620,12 @@ const AdminHub = ({
 
             <div className="flex items-center justify-center gap-4">
               <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm shrink-0">
-                <QRCodeSVG value={`${window.location.origin}/trainer-sign-on.html`} size={64} />
+                <QRCodeSVG value={typeof window !== 'undefined' ? `${window.location.origin}${TRAINER_SIGN_ON_URL}` : TRAINER_SIGN_ON_URL} size={64} />
               </div>
               <div className="text-left flex flex-col items-start">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Scan or Click</span>
                 <a
-                  href="/trainer-sign-on.html"
+                  href={TRAINER_SIGN_ON_URL}
                   target="_blank"
                   className="bg-white border border-gray-200 text-eqc-green text-xs font-bold py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
                 >
@@ -779,7 +801,7 @@ const AdminHub = ({
               <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3">
                 <p className="text-xs text-blue-700 font-medium flex items-center gap-2">
                   <ExternalLink size={14} />
-                  Rooms also update when trainers sign on via the <a href="/trainer-sign-on.html" target="_blank" className="underline font-bold">Trainer Sign-On Portal</a>.
+                  Rooms also update when trainers sign on via the <a href={TRAINER_SIGN_ON_URL} target="_blank" className="underline font-bold">Trainer Sign-On Portal</a>.
                 </p>
               </div>
             </div>
@@ -951,7 +973,7 @@ const AdminHub = ({
           )}
         </div>
         <div className="p-4 border-t flex justify-between items-center shrink-0">
-          <a href="/trainer-sign-on.html" target="_blank" className="flex items-center gap-2 text-eqc-green bg-eqc-green/10 px-4 py-2 rounded-lg font-bold hover:bg-eqc-green/20 transition-colors">
+          <a href={TRAINER_SIGN_ON_URL} target="_blank" className="flex items-center gap-2 text-eqc-green bg-eqc-green/10 px-4 py-2 rounded-lg font-bold hover:bg-eqc-green/20 transition-colors">
             <User size={18} /> Trainer Sign-On Portal
           </a>
         </div>
@@ -1091,7 +1113,7 @@ const FloorPlan = () => {
       </div>
       <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center">
         <img
-          src="/images/eqc-perth-map-2048x.png"
+          src="/images/eqc-perth-youarehere-v5.jpeg"
           alt="Campus Floor Plan"
           className="w-full h-full object-cover scale-110"
           referrerPolicy="no-referrer"
@@ -1116,6 +1138,7 @@ export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
 
   useEffect(() => {
+    if (IS_DEMO_MODE) return;
     const socket = io();
 
     socket.on("rooms_updated", (updatedRooms: RoomAllocation[]) => {
@@ -1157,6 +1180,11 @@ export default function App() {
 
   return (
     <div className="h-screen w-full flex flex-col font-sans overflow-x-hidden overflow-y-auto bg-eqc-bg relative">
+      {IS_DEMO_MODE && (
+        <div className="fixed bottom-4 left-4 z-50 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-lg">
+          Static Preview · Read Only
+        </div>
+      )}
       <AnimatePresence>
         {showAdmin && (
           <AdminHub
