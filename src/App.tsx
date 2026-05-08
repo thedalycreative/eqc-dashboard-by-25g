@@ -88,11 +88,11 @@ const TRAINER_SIGN_ON_URL = `${import.meta.env.BASE_URL}trainer-sign-on.html`;
 // --- Mock Data ---
 
 const INITIAL_ROOMS: RoomAllocation[] = IS_DEMO_MODE ? [
-  { id: 1, roomName: 'Room 1', status: 'live', course: 'BSB50120 - Diploma of Business', trainer: 'Sarah Johnson', intake: 'Jan 2026', topic: 'Marketing Fundamentals' },
-  { id: 2, roomName: 'Room 2', status: 'live', course: 'ICT50220 - Diploma of IT', trainer: 'David Chen', intake: 'Mar 2026', topic: 'Cloud Architecture' },
+  { id: 1, roomName: 'Room 1', status: 'live', course: 'ICT40120 - Cert IV in Cyber Security', trainer: 'Tim', intake: '25g', topic: 'Network Defence' },
+  { id: 2, roomName: 'Room 2', status: 'live', course: 'ICT50220 - Dip of IT', trainer: 'Saxon', intake: '26b', topic: 'Cloud Architecture' },
   { id: 3, roomName: 'Room 3', status: 'break' },
-  { id: 4, roomName: 'Room 4', status: 'live', course: 'SIT50422 - Hospitality', trainer: 'Maria Lopez', intake: 'Feb 2026', topic: 'Service Excellence' },
-  { id: 5, roomName: 'Room 5', status: 'available' },
+  { id: 4, roomName: 'Room 4', status: 'live', course: 'BSB50120 - Dip of Business', trainer: 'Emma', intake: '25g', topic: 'Service Excellence' },
+  { id: 5, roomName: 'Room 5', status: 'live', course: 'ICT30120 - Cert III in IT', trainer: 'Nobody Special', intake: '26a', topic: 'Intro to Programming' },
   { id: 6, roomName: 'Room 6', status: 'available' },
 ] : [
   { id: 1, roomName: 'Room 1', status: 'available' },
@@ -123,6 +123,19 @@ const EVENTS: Event[] = [
     description: 'A deep dive into professional development and networking.'
   }
 ];
+
+// --- Trainer Image Lookup ---
+
+const KNOWN_TRAINERS = ['Aaron', 'Emma', 'Jesse', 'Saxon', 'Tim', 'Tommy'];
+
+function getTrainerImagePath(trainerName?: string): string {
+  if (!trainerName) return '/images/trainer-cutouts/eqc-perth-trainer-cutout-Skelly-cut-out.PNG';
+  const firstName = trainerName.split(' ')[0];
+  const match = KNOWN_TRAINERS.find(t => t.toLowerCase() === firstName.toLowerCase());
+  return match
+    ? `/images/trainer-cutouts/eqc-perth-trainer-cutout-${match}-cut-out.PNG`
+    : '/images/trainer-cutouts/eqc-perth-trainer-cutout-Skelly-cut-out.PNG';
+}
 
 // --- Components ---
 
@@ -185,77 +198,84 @@ const Header = () => {
   );
 };
 
-interface RoomItemProps {
-  room: RoomAllocation;
-  key?: any;
-}
-
-const RoomItem = ({ room }: RoomItemProps) => {
+const RoomItem = ({ room }: { room: RoomAllocation }) => {
   const isLive = room.status === 'live';
   const isBreak = room.status === 'break';
+  const trainerImg = getTrainerImagePath(room.trainer);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={`
-        flex items-center justify-between p-5 rounded-2xl transition-all cursor-default flex-1
-        ${isLive ? 'bg-eqc-green text-white shadow-xl scale-[1.01]' : isBreak ? 'bg-orange-500 text-white shadow-lg' : 'bg-white border border-gray-100 shadow-sm'}
+        grid grid-cols-[90px_70px_1fr_1.5fr_1fr_60px] items-center gap-4 px-5 py-3 rounded-2xl transition-all cursor-default
+        ${isLive ? 'bg-eqc-green text-white shadow-xl' : isBreak ? 'bg-orange-500 text-white shadow-lg' : 'bg-white border border-gray-100 shadow-sm'}
       `}
     >
-      <div className="flex items-center gap-10 flex-1">
-        <div className="w-32 shrink-0">
-          <h3 className="text-2xl font-bold serif leading-none mb-1">{room.roomName}</h3>
-          <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-white animate-pulse' : isBreak ? 'bg-white' : 'bg-eqc-green'}`}></div>
-            <span className={`text-xs font-bold uppercase tracking-wider ${isLive || isBreak ? 'text-white/80' : 'text-eqc-muted'}`}>
-              {room.status}
-            </span>
-          </div>
-        </div>
+      {/* Room Number */}
+      <div>
+        <h3 className="text-xl font-bold serif leading-none">{room.roomName}</h3>
+      </div>
 
-        {isLive && (
-          <div className="flex gap-12 flex-1">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black opacity-60 mb-0.5">Course</span>
-              <span className="font-bold text-lg leading-tight">{room.course}</span>
-              <div className="flex items-center gap-1.5 text-sm opacity-90 italic mt-1 font-medium">
-                <BookOpen size={14} />
-                <span>{room.topic}</span>
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black opacity-60 mb-0.5">Trainer</span>
-              <span className="font-bold text-lg">{room.trainer}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-widest font-black opacity-60 mb-0.5">Intake</span>
-              <span className="font-bold text-lg">{room.intake}</span>
-            </div>
-          </div>
-        )}
-
-        {isBreak && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-3 text-xl font-bold italic">
-              <Coffee size={24} />
-              <span>Scheduled Break</span>
-            </div>
-          </div>
-        )}
-
-        {!isLive && !isBreak && (
-          <div className="flex-1 flex items-center justify-center">
-            <span className="text-base text-eqc-muted font-medium italic">Available for study</span>
-          </div>
+      {/* Intake */}
+      <div>
+        {isLive && room.intake ? (
+          <span className="text-lg font-bold">{room.intake}</span>
+        ) : (
+          <span className={`text-sm italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
         )}
       </div>
 
-      <div className="shrink-0 ml-4">
+      {/* Trainer with photo */}
+      <div className="flex items-center gap-3 min-w-0">
+        {isLive ? (
+          <>
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 shrink-0 bg-black/10">
+              <img
+                src={trainerImg}
+                alt={room.trainer || 'Unknown'}
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+            <span className="font-bold text-base truncate">{room.trainer}</span>
+          </>
+        ) : isBreak ? (
+          <div className="flex items-center gap-2 italic font-bold">
+            <Coffee size={18} />
+            <span>On Break</span>
+          </div>
+        ) : (
+          <span className="text-sm text-eqc-muted italic">Available</span>
+        )}
+      </div>
+
+      {/* Course */}
+      <div className="min-w-0">
+        {isLive && room.course ? (
+          <span className="font-bold text-sm leading-tight truncate block">{room.course}</span>
+        ) : (
+          <span className={`text-sm italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
+        )}
+      </div>
+
+      {/* Topic */}
+      <div className="min-w-0">
+        {isLive && room.topic ? (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <BookOpen size={14} className="shrink-0 opacity-70" />
+            <span className="text-sm font-medium italic truncate">{room.topic}</span>
+          </div>
+        ) : (
+          <span className={`text-sm italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
+        )}
+      </div>
+
+      {/* Live indicator */}
+      <div className="flex justify-end">
         {isLive && (
-          <div className="flex items-center gap-3 bg-white/20 px-4 py-2 rounded-full border border-white/30 backdrop-blur-sm">
-            <div className="w-2 h-1 bg-white rounded-full animate-ping"></div>
-            <span className="text-[10px] font-black tracking-widest uppercase">In Session</span>
+          <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full border border-white/30">
+            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+            <span className="text-[9px] font-black tracking-widest uppercase">LIVE</span>
           </div>
         )}
       </div>
@@ -1086,7 +1106,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col font-sans overflow-x-hidden overflow-y-auto bg-eqc-bg relative">
+    <div className="h-screen w-full flex flex-col font-sans overflow-hidden bg-eqc-bg relative">
       {IS_DEMO_MODE && (
         <div className="fixed bottom-4 left-4 z-50 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-lg">
           Static Preview · Read Only
@@ -1120,13 +1140,23 @@ export default function App() {
       <main className="flex-1 flex flex-col p-6 min-h-0 gap-6">
         <div className="flex-1 flex gap-6 min-h-0">
           {/* Left Column: Room Allocations */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-[3] flex flex-col min-h-0 min-w-0">
             <div className="flex items-center gap-3 h-8 mb-4 shrink-0">
               <div className="w-2.5 h-2.5 bg-eqc-green rounded-full shadow-[0_0_15px_rgba(26,122,84,0.8)] animate-pulse"></div>
               <h2 className="text-2xl font-bold serif text-white">Today's Room Allocations</h2>
             </div>
 
-            <div className="flex-1 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-2">
+            {/* Column headers */}
+            <div className="grid grid-cols-[90px_70px_1fr_1.5fr_1fr_60px] gap-4 px-5 mb-2 shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Room</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Intake</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Trainer</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Course</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Topic</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50 text-right">Status</span>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 pb-2">
               {rooms.map((room) => (
                 <RoomItem key={room.id} room={room} />
               ))}
@@ -1134,7 +1164,7 @@ export default function App() {
           </div>
 
           {/* Center Column: Floor Plan & Upcoming Events */}
-          <div className="w-1/4 shrink-0 flex flex-col min-h-0">
+          <div className="flex-1 shrink-0 flex flex-col min-h-0 min-w-0">
             <div className="h-8 mb-4 shrink-0" />
             <div className="flex-1 flex flex-col gap-6 min-h-0">
               <div className="flex-[3] min-h-0">
@@ -1147,7 +1177,7 @@ export default function App() {
           </div>
 
           {/* Right Column: Campus & Nearby + Mobile View */}
-          <div className="w-1/4 flex flex-col shrink-0 min-h-0">
+          <div className="flex-1 flex flex-col shrink-0 min-h-0 min-w-0">
             <div className="h-8 mb-4 shrink-0" />
             <div className="flex-1 flex flex-col gap-6 min-h-0">
               <CampusMap />
