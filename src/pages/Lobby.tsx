@@ -140,74 +140,73 @@ const RoomItem = ({ room }: { room: RoomAllocation }) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={`
-        grid grid-cols-[110px_80px_1fr_1.5fr_1fr_70px] items-center gap-5 px-6 rounded-2xl transition-all cursor-default flex-1
+        grid grid-cols-[140px_1fr_120px] items-center gap-6 px-6 py-4 rounded-2xl transition-all cursor-default flex-1
         ${isLive ? 'bg-eqc-green text-white shadow-xl' : isBreak ? 'bg-orange-500 text-white shadow-lg' : isInactive ? 'bg-gray-300 text-gray-500 shadow-sm' : 'bg-white border border-gray-100 shadow-sm'}
       `}
     >
+      {/* Room number — dominant */}
       <div>
-        <h3 className="text-2xl font-bold serif leading-none">{room.roomName}</h3>
+        <h3 className="font-display font-bold text-5xl leading-none tracking-tight">{room.roomName.replace('Room ', '')}</h3>
+        <span className={`text-[10px] font-bold uppercase tracking-widest mt-1 block ${isLive || isBreak ? 'text-white/70' : isInactive ? 'text-gray-500' : 'text-eqc-muted'}`}>
+          {room.roomName.startsWith('Room ') ? 'Room' : ''}
+        </span>
       </div>
 
-      <div>
-        {hasContent && room.intake ? (
-          <span className="text-xl font-bold">{room.intake}</span>
-        ) : (
-          <span className={`text-base italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Centre column: trainer (with dot) + intake on top row, course + topic below */}
+      <div className="min-w-0 space-y-1">
         {hasContent && room.trainer ? (
-          <>
-            <div className={`w-14 h-14 rounded-full overflow-hidden border-2 shrink-0 bg-white ${isInactive ? 'border-gray-200' : 'border-white/40'}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-12 h-12 rounded-full overflow-hidden border-2 shrink-0 bg-white ${isInactive ? 'border-gray-200' : 'border-white/40'}`}>
               <img src={trainerImg} alt={room.trainer || 'Unknown'} className="w-full h-full object-cover object-top" />
             </div>
-            <span className="font-bold text-xl truncate">{room.trainer}</span>
-          </>
+            <div className="flex items-baseline gap-3 min-w-0 flex-1">
+              <span className="font-sans font-medium text-2xl truncate leading-none">{room.trainer}</span>
+              {room.intake && (
+                <span className={`font-sans text-xl shrink-0 leading-none ${isLive || isBreak ? 'text-white/80' : isInactive ? 'text-gray-500' : 'text-eqc-muted'}`}>
+                  · {room.intake}
+                </span>
+              )}
+            </div>
+          </div>
         ) : isBreak ? (
-          <div className="flex items-center gap-3 italic font-bold text-xl">
+          <div className="flex items-center gap-3 italic font-bold text-2xl">
             <Coffee size={24} />
             <span>On Break</span>
           </div>
         ) : (
-          <span className="text-base text-eqc-muted italic">Available</span>
+          <span className="text-lg italic opacity-80">Available for study</span>
         )}
-      </div>
 
-      <div className="min-w-0">
-        {hasContent && room.course ? (
-          <span className="font-bold text-base leading-tight truncate block">{room.course}</span>
-        ) : (
-          <span className={`text-base italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
-        )}
-      </div>
-
-      <div className="min-w-0">
-        {hasContent && room.topic ? (
-          <div className="flex items-center gap-2 min-w-0">
-            <BookOpen size={18} className="shrink-0 opacity-70" />
-            <span className="text-base font-medium italic truncate">{room.topic}</span>
+        {hasContent && (room.course || room.topic) && (
+          <div className={`flex items-center gap-3 flex-wrap text-base ${isLive || isBreak ? 'text-white/85' : isInactive ? 'text-gray-500' : 'text-eqc-muted'}`}>
+            {room.course && <span className="truncate font-medium max-w-full">{room.course}</span>}
+            {room.course && room.topic && <span className="opacity-50">·</span>}
+            {room.topic && (
+              <span className="flex items-center gap-1.5 italic truncate">
+                <BookOpen size={14} className="shrink-0 opacity-70" />
+                {room.topic}
+              </span>
+            )}
           </div>
-        ) : (
-          <span className={`text-base italic ${isBreak ? 'text-white/50' : 'text-eqc-muted'}`}>&mdash;</span>
         )}
       </div>
 
+      {/* Status blinker */}
       <div className="flex justify-end">
         {isLive && (
           <div className="flex items-center gap-2 bg-white/20 px-3 py-2 rounded-full border border-white/30">
-            <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping"></div>
-            <span className="text-[10px] font-black tracking-widest uppercase">LIVE</span>
+            <div className="w-2.5 h-2.5 bg-white rounded-full animate-ping" />
+            <span className="text-sm font-black tracking-widest uppercase">LIVE</span>
           </div>
         )}
         {isBreak && breakRemaining && (
           <div className="flex items-center gap-2 bg-white/20 px-3 py-2 rounded-full border border-white/30">
-            <Coffee size={12} />
-            <span className="text-[10px] font-black tracking-widest uppercase">{breakRemaining}</span>
+            <Coffee size={14} />
+            <span className="text-base font-black tracking-wider uppercase tabular-nums">{breakRemaining}</span>
           </div>
         )}
         {isInactive && (
-          <span className="text-[10px] font-black tracking-widest uppercase opacity-70">Signed off</span>
+          <span className="text-sm font-black tracking-widest uppercase opacity-70">Signed off</span>
         )}
       </div>
     </motion.div>
@@ -233,13 +232,11 @@ const EventList = ({ events }: { events: Event[] }) => {
   const currentEvent = events[currentIdx];
 
   return (
-    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-lg h-full flex flex-col overflow-hidden">
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-eqc-green/10 flex items-center justify-center rounded-full">
-            <CalendarDaysIcon size={26} className="text-eqc-green" />
-          </div>
-          <h2 className="text-2xl text-eqc-green font-bold serif">Upcoming Events</h2>
+          <CalendarDaysIcon size={24} className="text-eqc-green" />
+          <h2 className="text-2xl font-display font-bold">Upcoming Events</h2>
         </div>
         {events.length > 1 && (
           <div className="flex items-center gap-1.5">
@@ -252,7 +249,7 @@ const EventList = ({ events }: { events: Event[] }) => {
 
       <div className="flex-1 flex flex-col justify-center min-h-0 relative">
         {events.length === 0 ? (
-          <p className="text-eqc-muted italic text-base">No events scheduled.</p>
+          <p className="text-eqc-muted italic text-sm">No events scheduled.</p>
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
@@ -263,11 +260,11 @@ const EventList = ({ events }: { events: Event[] }) => {
               transition={{ duration: 0.4 }}
               className="border-l-4 border-eqc-green pl-5 py-1"
             >
-              <p className="text-xs font-bold text-eqc-green uppercase tracking-widest mb-2">
+              <p className="text-[10px] font-black text-eqc-green uppercase tracking-widest mb-2">
                 {new Date(currentEvent.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
-              <h3 className="text-2xl font-bold serif text-eqc-text leading-tight mb-2">{currentEvent.title}</h3>
-              <p className="text-sm text-eqc-muted leading-relaxed line-clamp-3">{currentEvent.description}</p>
+              <h3 className="text-xl font-display font-bold text-eqc-text leading-tight mb-2">{currentEvent.title}</h3>
+              <p className="text-xs text-eqc-muted leading-relaxed line-clamp-3">{currentEvent.description}</p>
             </motion.div>
           </AnimatePresence>
         )}
@@ -323,9 +320,9 @@ const Forecast7Widget = () => {
 const CampusMap = () => {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-3 mb-5 shrink-0">
+      <div className="flex items-center gap-3 mb-4 shrink-0">
         <MapPin size={24} className="text-eqc-green" />
-        <h2 className="text-2xl font-bold serif">Campus & Nearby</h2>
+        <h2 className="text-2xl font-display font-bold">Campus & Nearby</h2>
       </div>
       <div className="flex-1 flex flex-col gap-4 overflow-hidden">
         <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 shadow-inner min-h-0">
@@ -382,7 +379,17 @@ const CampusLifeCarousel = () => {
     return () => clearInterval(id);
   }, [items.length, settings.carouselSlideDurationMs]);
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-lg h-full flex flex-col items-center justify-center text-center p-6">
+        <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+          <MapPinCheckInside size={26} className="text-gray-300" />
+        </div>
+        <h3 className="text-xl font-display font-bold leading-tight">Campus Life</h3>
+        <p className="text-xs text-eqc-muted mt-1 max-w-[200px]">Photos appear here as they're added in the admin panel.</p>
+      </div>
+    );
+  }
 
   const current = items[idx];
 
@@ -465,16 +472,31 @@ const RssTicker = () => {
   );
 };
 
+// --- Mobile View tile (QR for the /mobile route) ---
+
+const MobileViewTile = () => {
+  const url = typeof window !== 'undefined' ? `${window.location.origin}/mobile` : '';
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg h-full flex flex-col items-center justify-center text-center gap-3">
+      <div className="bg-gray-50 rounded-xl border border-gray-100 p-2">
+        <QRCodeSVG value={url} size={88} />
+      </div>
+      <div>
+        <h3 className="text-xl font-display font-bold leading-tight">Mobile View</h3>
+        <p className="text-xs text-eqc-green font-bold mt-1">Scan to view on your phone</p>
+      </div>
+    </div>
+  );
+};
+
 // --- Floor Plan ---
 
 const FloorPlan = () => {
   return (
-    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-lg flex flex-col overflow-hidden h-full">
-      <div className="flex items-center gap-2 mb-2 shrink-0">
-        <div className="w-10 h-10 flex items-center justify-center">
-          <MapPinCheckInside size={30} className="text-eqc-green" />
-        </div>
-        <h2 className="text-2xl font-bold serif">Campus Map</h2>
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-lg flex flex-col overflow-hidden h-full">
+      <div className="flex items-center gap-3 mb-4 shrink-0">
+        <MapPinCheckInside size={24} className="text-eqc-green" />
+        <h2 className="text-2xl font-display font-bold">Campus Map</h2>
       </div>
       <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center">
         <img src="/images/eqc-perth-youarehere-v5.jpeg" alt="Campus Floor Plan" className="w-full h-full object-cover scale-110" referrerPolicy="no-referrer" />
@@ -584,9 +606,7 @@ export default function Lobby() {
   const [rooms] = useRooms(INITIAL_ROOMS);
   const [events] = useEvents(IS_DEMO_MODE ? DEMO_EVENTS : []);
   const announcements = useAnnouncements();
-  const carouselItems = useCarousel();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const hasCarousel = carouselItems.length > 0;
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -626,12 +646,9 @@ export default function Lobby() {
               <h2 className="text-2xl font-bold serif text-white">Today's Room Allocations</h2>
             </div>
 
-            <div className="grid grid-cols-[110px_80px_1fr_1.5fr_1fr_70px] gap-5 px-6 mb-2 shrink-0">
+            <div className="grid grid-cols-[140px_1fr_120px] gap-6 px-6 mb-2 shrink-0">
               <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Room</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Intake</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Trainer</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Course</span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Topic</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Trainer · Intake · Course / Topic</span>
               <span className="text-[10px] font-black uppercase tracking-widest text-white/50 text-right">Status</span>
             </div>
 
@@ -640,29 +657,27 @@ export default function Lobby() {
             </div>
           </div>
 
-          <div className="flex-1 shrink-0 flex flex-col min-h-0 min-w-0">
+          {/* Right area: 3-row CSS grid.
+              Row 1: FloorPlan spans both columns.
+              Row 2: CampusLifeCarousel | CampusMap (Google).
+              Row 3: EventList | MobileView. */}
+          <div className="flex-[2] shrink-0 flex flex-col min-h-0 min-w-0">
             <div className="h-8 mb-4 shrink-0" />
-            <div className="flex-1 flex flex-col gap-6 min-h-0">
-              <div className="flex-[3] min-h-0"><FloorPlan /></div>
-              {hasCarousel && (
-                <div className="flex-[2] min-h-0"><CampusLifeCarousel /></div>
-              )}
-              <div className="flex-[2] min-h-0"><EventList events={events} /></div>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col shrink-0 min-h-0 min-w-0">
-            <div className="h-8 mb-4 shrink-0" />
-            <div className="flex-1 flex flex-col gap-6 min-h-0">
-              <CampusMap />
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-lg flex items-center gap-4 shrink-0">
-                <div className="w-20 h-20 bg-gray-50 rounded-xl flex items-center justify-center p-1.5 shrink-0 border border-gray-100">
-                  <QRCodeSVG value={typeof window !== 'undefined' ? `${window.location.origin}/mobile` : ''} size={70} />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-xl font-bold serif mb-0.5 leading-tight">Mobile View</h3>
-                  <p className="text-[11px] text-eqc-green font-bold tracking-tight">Scan to view on your phone</p>
-                </div>
+            <div className="flex-1 min-h-0 grid grid-cols-2 grid-rows-[2fr_2fr_1.5fr] gap-6">
+              <div className="col-span-2 min-h-0">
+                <FloorPlan />
+              </div>
+              <div className="min-h-0">
+                <CampusLifeCarousel />
+              </div>
+              <div className="min-h-0">
+                <CampusMap />
+              </div>
+              <div className="min-h-0">
+                <EventList events={events} />
+              </div>
+              <div className="min-h-0">
+                <MobileViewTile />
               </div>
             </div>
           </div>

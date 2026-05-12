@@ -96,20 +96,20 @@ function PickerGrid<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
       {options.map(opt => (
         <button
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
-          className={`px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors flex items-center gap-2 ${
+          className={`min-w-0 px-3 py-2 rounded-lg text-xs font-bold border-2 transition-colors flex items-center gap-2 ${
             value === opt.value ? 'border-eqc-green bg-eqc-green/10' : 'border-gray-200 bg-white hover:border-gray-300'
           }`}
         >
           {opt.preview?.startsWith('#') && (
-            <span className="w-3 h-3 rounded-full border border-black/10" style={{ background: opt.preview }} />
+            <span className="w-3 h-3 rounded-full border border-black/10 shrink-0" style={{ background: opt.preview }} />
           )}
-          <span className={opt.preview?.startsWith('text-') ? opt.preview : ''}>{opt.label}</span>
+          <span className={`truncate ${opt.preview?.startsWith('text-') ? opt.preview : ''}`}>{opt.label}</span>
         </button>
       ))}
     </div>
@@ -213,7 +213,7 @@ export default function AdminAlerts() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-8 max-w-5xl mx-auto w-full">
       <Toaster position="bottom-right" />
 
       <div>
@@ -224,9 +224,11 @@ export default function AdminAlerts() {
         <p className="text-sm text-eqc-muted mt-1">Scrolling announcements that appear across the top of every screen.</p>
       </div>
 
-      {/* Editor + Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-5">
+      {/* Editor + Preview: switches from stacked → side-by-side at lg.
+          Using minmax(0,1fr) so columns can shrink below intrinsic content
+          width — prevents horizontal overflow at any zoom level. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6">
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 space-y-5 min-w-0">
           <h3 className="text-lg font-display font-bold flex items-center gap-2">
             <Plus size={18} className="text-eqc-green" /> New Alert
           </h3>
@@ -308,11 +310,13 @@ export default function AdminAlerts() {
         </div>
 
         {/* Live preview */}
-        <div className="space-y-3">
+        <div className="space-y-3 min-w-0">
           <h3 className="text-lg font-display font-bold flex items-center gap-2">
             <Eye size={18} className="text-eqc-green" /> Live preview
           </h3>
-          <PreviewBanner draft={draft} />
+          <div className="min-w-0 overflow-hidden">
+            <PreviewBanner draft={draft} />
+          </div>
           <p className="text-xs text-gray-500 italic">Auto-updates as you edit. The banner will appear at the top of every screen and scroll continuously.</p>
         </div>
       </div>
@@ -339,8 +343,8 @@ export default function AdminAlerts() {
                       onChange={(e) => setEditDraft({ ...editDraft, text: e.target.value })}
                       className="w-full p-2 border rounded text-sm font-bold"
                     />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Background</label>
                         <select value={editDraft.color ?? ann.color} onChange={(e) => setEditDraft({ ...editDraft, color: e.target.value })} className="w-full p-2 border rounded text-xs font-bold">
                           {COLOUR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
