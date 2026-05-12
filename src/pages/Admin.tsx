@@ -203,7 +203,7 @@ export default function Admin() {
         </nav>
 
         {/* Tab content */}
-        <main className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
           <Outlet />
         </main>
       </div>
