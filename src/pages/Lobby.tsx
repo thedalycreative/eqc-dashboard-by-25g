@@ -484,7 +484,7 @@ const FloorPlan = () => {
         <h2 className="text-2xl font-display font-bold">Campus Map</h2>
       </div>
       <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center">
-        <img src="/images/eqc-perth-youarehere-v5.jpeg" alt="Campus Floor Plan" className="w-full h-full object-cover scale-110" referrerPolicy="no-referrer" />
+        <img src="/images/eqc-perth-youarehere-v5.png" alt="Campus Floor Plan" className="w-full h-full object-cover scale-110" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border border-white shadow-sm">
             <span className="text-xs font-bold text-eqc-text uppercase tracking-widest">Level 1 - West Perth</span>
