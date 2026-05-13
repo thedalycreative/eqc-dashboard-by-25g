@@ -54,14 +54,14 @@ function LoginGate({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-eqc-bg z-[100] flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <ShieldQuestionIcon size={30} className="text-eqc-green" />
-            <h2 className="text-2xl font-bold serif text-gray-800">Admin Login</h2>
+    <div className="fixed inset-0 bg-eqc-bg z-[100] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white p-6 sm:p-8 rounded-3xl max-w-md w-full shadow-2xl my-auto">
+        <div className="flex justify-between items-center mb-6 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <ShieldQuestionIcon size={28} className="text-eqc-green shrink-0" />
+            <h2 className="text-xl sm:text-2xl font-bold serif text-gray-800 truncate">Admin Login</h2>
           </div>
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full transition-colors" aria-label="Close">
+          <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-100 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close">
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -79,11 +79,11 @@ function LoginGate({ onSuccess }: { onSuccess: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
-              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-eqc-green outline-none transition-shadow"
+              className="w-full px-4 py-3 min-h-[48px] text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-eqc-green outline-none transition-shadow"
               placeholder="Enter admin password"
             />
           </div>
-          <button type="submit" className="w-full bg-eqc-green text-white py-3 rounded-xl font-bold hover:bg-eqc-green/90 transition-colors flex items-center justify-center gap-2">
+          <button type="submit" className="w-full bg-eqc-green text-white py-3 min-h-[48px] rounded-xl font-bold hover:bg-eqc-green/90 transition-colors flex items-center justify-center gap-2">
             <LogIn size={20} /> Login
           </button>
         </form>
@@ -116,12 +116,29 @@ function LoginGate({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+// Hand-coded inline SVG icons for new mobile controls.
+const HamburgerIcon = ({ size = 22 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = ({ size = 22 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 export default function Admin() {
   const navigate = useNavigate();
   const location = useLocation();
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(STORAGE_KEY) === 'ok');
   const [settings] = useGlobalSettings();
   const countdown = useResetCountdown(settings.resetTimeHour);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // If user lands on /admin without a tab, redirect to /admin/rooms
   useEffect(() => {
@@ -129,6 +146,11 @@ export default function Admin() {
       navigate('/admin/rooms', { replace: true });
     }
   }, [authed, location.pathname, navigate]);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
 
   if (!authed) {
     return <LoginGate onSuccess={() => setAuthed(true)} />;
@@ -142,45 +164,90 @@ export default function Admin() {
   return (
     <div className="h-screen w-full flex flex-col bg-gray-50 font-sans overflow-hidden">
       {/* Persistent header with countdown */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <Cog size={28} className="text-eqc-green" />
-            <h1 className="text-xl font-bold serif text-gray-800">Administration</h1>
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center shrink-0 shadow-sm gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="md:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Open navigation menu"
+          >
+            <HamburgerIcon />
+          </button>
+          <div className="flex items-center gap-3 min-w-0">
+            <Cog size={28} className="text-eqc-green shrink-0 hidden sm:block" />
+            <h1 className="text-lg sm:text-xl font-bold serif text-gray-800 truncate">Administration</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="hidden sm:flex flex-col items-end">
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Resets in</span>
             <span className="font-timer text-2xl font-bold tabular-nums text-eqc-green leading-none">{countdown}</span>
           </div>
 
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            className="hidden md:flex items-center gap-2 px-4 py-2 text-sm font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <Home size={16} /> Lobby
           </button>
 
           <button
             onClick={signOut}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors min-h-[44px]"
           >
-            <LogOut size={16} /> Sign Out
+            <LogOut size={16} /> <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </header>
 
-      <div className="flex-1 flex min-h-0">
-        {/* Sidebar nav */}
-        <nav className="w-56 bg-white border-r border-gray-200 p-3 flex flex-col gap-1 shrink-0 overflow-y-auto">
+      <div className="flex-1 flex min-h-0 relative">
+        {/* Mobile drawer backdrop */}
+        {drawerOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setDrawerOpen(false)}
+            className="md:hidden fixed inset-0 top-[57px] bg-black/40 z-40 backdrop-blur-[1px]"
+          />
+        )}
+
+        {/* Sidebar nav (desktop static; mobile slide-in drawer) */}
+        <nav
+          className={`
+            bg-white border-r border-gray-200 p-3 flex flex-col gap-1 overflow-y-auto z-50
+            md:relative md:translate-x-0 md:w-56 md:shrink-0
+            fixed top-[57px] bottom-0 left-0 w-64 max-w-[80vw] shadow-2xl md:shadow-none transition-transform duration-200 ease-out
+            ${drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          `}
+          aria-hidden={!drawerOpen && typeof window !== 'undefined' && window.innerWidth < 768}
+        >
+          {/* Drawer close (mobile only) */}
+          <div className="md:hidden flex items-center justify-between pb-2 mb-1 border-b border-gray-100">
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Menu</span>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close menu"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          {/* Mobile-only countdown chip */}
+          <div className="md:hidden mb-2 px-3 py-2 bg-gray-50 rounded-lg flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Resets in</span>
+            <span className="font-timer text-base font-bold tabular-nums text-eqc-green leading-none">{countdown}</span>
+          </div>
+
           {NAV_TABS.map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-colors ${
+                `flex items-center gap-3 px-3 py-3 md:py-2.5 rounded-lg text-sm font-bold transition-colors min-h-[44px] ${
                   isActive ? 'bg-eqc-green text-white' : 'text-gray-600 hover:bg-gray-100'
                 }`
               }
@@ -190,12 +257,18 @@ export default function Admin() {
             </NavLink>
           ))}
 
-          <div className="mt-auto pt-3 border-t border-gray-100">
+          <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
+            <button
+              onClick={() => navigate('/')}
+              className="md:hidden flex items-center gap-2 px-3 py-3 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors min-h-[44px]"
+            >
+              <Home size={14} /> Back to Lobby
+            </button>
             <a
               href={TRAINER_SIGN_ON_URL}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold text-eqc-green hover:bg-eqc-green/5 transition-colors"
+              className="flex items-center gap-2 px-3 py-3 md:py-2.5 rounded-lg text-xs font-bold text-eqc-green hover:bg-eqc-green/5 transition-colors min-h-[44px]"
             >
               <ExternalLink size={14} /> Sign-On Portal
             </a>
@@ -203,7 +276,7 @@ export default function Admin() {
         </nav>
 
         {/* Tab content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 custom-scrollbar">
           <Outlet />
         </main>
       </div>

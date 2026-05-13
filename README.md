@@ -11,6 +11,14 @@
 
 A single-page React app deployed on Vercel that drives the lobby screen at EQC Perth. Real-time room status, trainer photos, scrolling alerts, upcoming events, weather, and a campus map. Trainers update their own status via a QR-coded sign-on form. Staff manage everything else from the `/admin` panel.
 
+### What you can do
+
+- **Lobby screen**: fluid layout that renders correctly at 100 percent browser zoom (90 / 100 / 110 / 125 percent all supported), live room allocations with trainer photos pulled from Firestore, scrolling alerts, weather, upcoming events, campus life carousel, floor plan, and a Google Maps embed.
+- **Mobile visitors**: anyone hitting the lobby URL on a phone gets a redirect modal that points them to the mobile sign-on portal (with a small admin cog and a "view anyway" escape hatch).
+- **Trainer sign-on portal**: sign on, start a break, end a break early, edit an active break's remaining time, sign off, and update your own profile photo (file picker + crop + Firebase upload, with the new photo appearing on the lobby live).
+- **Admin panel**: fully responsive. Desktop keeps the static sidebar; phones and tablets get a hamburger-triggered drawer with a backdrop. Tap targets are at least 44 px, login form fields stack and full-width on narrow screens.
+- **Carousel admin**: uploads now open an in-browser crop modal locked to the lobby tile ratio (16:9), with zoom, rotate, and reset controls before the cropped JPEG is uploaded to Firebase Storage.
+
 | Where | URL |
 |---|---|
 | **Lobby (production)** | [eqc-dashboard-by-25g.vercel.app](https://eqc-dashboard-by-25g.vercel.app) |
@@ -47,13 +55,13 @@ A single-page React app deployed on Vercel that drives the lobby screen at EQC P
 | `/admin/rooms` | Manage room allocations |
 | `/admin/events` | Manage upcoming events |
 | `/admin/alerts` | Manage scrolling banner alerts |
-| `/admin/carousel` | (Coming Phase 4) Campus life photo carousel |
-| `/admin/trainers` | (Coming Phase 4) Trainer profile management |
-| `/admin/signon-log` | (Coming Phase 4) Historical sign-on log |
-| `/admin/rss` | (Coming Phase 6) RSS news ticker feeds |
-| `/admin/settings` | (Coming Phase 4) WiFi, contacts, brand, timing settings |
-| `/trainer-sign-on.html` | Trainer sign-on form (standalone HTML) |
-| `/mobile` | (Coming Phase 6) Mobile companion view |
+| `/admin/carousel` | Campus life photo carousel (with in-browser crop modal) |
+| `/admin/trainers` | Trainer profile management with photo crop modal |
+| `/admin/signon-log` | Historical sign-on / sign-off log |
+| `/admin/rss` | RSS news ticker feeds |
+| `/admin/settings` | WiFi, contacts, brand, timing settings |
+| `/trainer-sign-on.html` | Trainer sign-on form (with break controls and photo update) |
+| `/mobile` | Mobile companion view (used by the dashboard redirect) |
 
 ---
 
@@ -181,6 +189,20 @@ firebase deploy --only firestore:rules
 
 - [`PROJECT.md`](./PROJECT.md) — what this project is, who it's for, and the user journey
 - [`BRAND.md`](./BRAND.md) — the EQC visual and tonal reference
+
+---
+
+## Recent fixes
+
+| Fix | What changed |
+|---|---|
+| Dashboard zoom dependency | Lobby now scales via a fluid root font-size (`clamp(11px, 0.85vw, 13px)` applied while the page is mounted) so layout works at 100 percent zoom and adapts at 90 / 110 / 125 percent. No magic 75 percent zoom required. |
+| Admin mobile compatibility | Sidebar collapses into a hamburger-triggered drawer with backdrop and inline close button. Login form stacks, inputs are full-width, all tap targets are at least 44 px. |
+| Trainer profile photo update | Trainer sign-on portal can now update a trainer's photo from the active sign-on tile: file picker, crop modal (react-easy-crop), upload to Firebase Storage, and immediate refresh on the lobby (Lobby now reads `photoUrl` from the `trainers` collection, falling back to the static cutout). |
+| Mobile dashboard redirect modal | First load of `/` on a phone (≤768 px viewport) shows a modal pointing to `/trainer-sign-on.html`, with a "View anyway" link and a hand-coded cog icon linking to `/admin`. Dismissal is remembered for the session. |
+| Carousel crop on upload | Carousel admin now opens a crop modal locked to 16:9 with zoom, rotate, and reset before uploading the cropped JPEG. |
+| Trainer break controls | Active-break tiles now expose `End break now` and `Edit break time` actions that update Firestore and the lobby countdown immediately. |
+| Live site image sync | Trainer photos persist to Firebase Storage (not localStorage) and the lobby reads them from Firestore in real time. The floor plan image carries a `?v5` cache-bust query so CDN caches do not serve a stale image after the floor plan is updated. |
 
 ---
 

@@ -1,11 +1,14 @@
-import { useState, useEffect, FormEvent, useMemo } from 'react';
-import { Coffee, LogOut, Check, X, Clock, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useState, useEffect, FormEvent, useMemo, useCallback, type ChangeEvent } from 'react';
+import { Coffee, LogOut, Check, X, Clock, AlertTriangle, ExternalLink, Camera, Play, Edit3, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast, { Toaster } from 'react-hot-toast';
+import Cropper from 'react-easy-crop';
+import type { Area } from 'react-easy-crop';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useRooms, useTrainers } from '../lib/hooks';
 import { getTrainerImagePath, SKELLY_PATH } from '../lib/trainers';
+import { uploadImage, deleteImage, readFileAsDataURL, getCroppedBlob } from '../lib/storage';
 import type { RoomAllocation, Trainer } from '../lib/types';
 
 const FIXED_COURSES = ['Cyber Security', 'Back End Web Dev'];
@@ -61,9 +64,12 @@ interface SignedOnTileProps {
   trainers: Trainer[];
   onBreak: () => void;
   onSignOff: () => void;
+  onUpdatePhoto: (trainer: Trainer) => void;
+  onEndBreak: (room: RoomAllocation) => void;
+  onEditBreak: (room: RoomAllocation) => void;
 }
 
-function SignedOnTile({ room, trainers, onBreak, onSignOff }: SignedOnTileProps) {
+function SignedOnTile({ room, trainers, onBreak, onSignOff, onUpdatePhoto, onEndBreak, onEditBreak }: SignedOnTileProps) {
   const [expanded, setExpanded] = useState(false);
   const matchedTrainer = trainers.find(t => t.name.toLowerCase() === (room.trainer || '').toLowerCase());
   const photoUrl = matchedTrainer?.photoUrl || getTrainerImagePath(room.trainer);
@@ -100,25 +106,263 @@ function SignedOnTile({ room, trainers, onBreak, onSignOff }: SignedOnTileProps)
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-t border-gray-100"
           >
-            <div className="p-3 flex gap-2">
-              <button
-                onClick={() => { onBreak(); setExpanded(false); }}
-                disabled={isBreak}
-                className="flex-1 px-3 py-2 text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg flex items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <Coffee size={14} /> {isBreak ? 'Already on break' : 'On Break'}
-              </button>
-              <button
-                onClick={() => { onSignOff(); setExpanded(false); }}
-                className="flex-1 px-3 py-2 text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 rounded-lg flex items-center justify-center gap-1.5"
-              >
-                <LogOut size={14} /> Sign Out
-              </button>
+            <div className="p-3 space-y-2">
+              {isBreak ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { onEndBreak(room); setExpanded(false); }}
+                    className="flex-1 px-3 py-2.5 min-h-[44px] text-xs font-bold bg-eqc-green/10 text-eqc-green hover:bg-eqc-green/20 rounded-lg flex items-center justify-center gap-1.5"
+                  >
+                    <Play size={14} /> End break now
+                  </button>
+                  <button
+                    onClick={() => { onEditBreak(room); setExpanded(false); }}
+                    className="flex-1 px-3 py-2.5 min-h-[44px] text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg flex items-center justify-center gap-1.5"
+                  >
+                    <Edit3 size={14} /> Edit break time
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { onBreak(); setExpanded(false); }}
+                  className="w-full px-3 py-2.5 min-h-[44px] text-xs font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg flex items-center justify-center gap-1.5"
+                >
+                  <Coffee size={14} /> Start break
+                </button>
+              )}
+              <div className="flex gap-2">
+                {matchedTrainer && (
+                  <button
+                    onClick={() => { onUpdatePhoto(matchedTrainer); setExpanded(false); }}
+                    className="flex-1 px-3 py-2.5 min-h-[44px] text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg flex items-center justify-center gap-1.5"
+                  >
+                    <Camera size={14} /> Update photo
+                  </button>
+                )}
+                <button
+                  onClick={() => { onSignOff(); setExpanded(false); }}
+                  className="flex-1 px-3 py-2.5 min-h-[44px] text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 rounded-lg flex items-center justify-center gap-1.5"
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+// --- Photo Update Modal (file pick + crop + upload) ---
+
+interface PhotoModalProps {
+  trainer: Trainer;
+  onCancel: () => void;
+  onSaved: () => void;
+}
+
+function PhotoModal({ trainer, onCancel, onSaved }: PhotoModalProps) {
+  const [srcDataUrl, setSrcDataUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const onCropComplete = useCallback((_: Area, px: Area) => {
+    setCroppedAreaPixels(px);
+  }, []);
+
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please pick an image file');
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      setSrcDataUrl(dataUrl);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+    } catch {
+      toast.error('Could not read file');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!srcDataUrl || !croppedAreaPixels) return;
+    setUploading(true);
+    try {
+      const blob = await getCroppedBlob(srcDataUrl, croppedAreaPixels, 512);
+      const path = `trainers/${trainer.id}.jpg`;
+      const photoUrl = await uploadImage(blob, path);
+      // If the URL changed (Firebase may return same path with a new token), delete old.
+      if (trainer.photoUrl && trainer.photoUrl !== photoUrl) {
+        try { await deleteImage(trainer.photoUrl); } catch { /* ignore */ }
+      }
+      await setDoc(doc(db, 'trainers', trainer.id), { photoUrl }, { merge: true });
+      toast.success('Profile photo updated');
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[95vh]">
+        <div className="p-5 border-b flex justify-between items-center shrink-0">
+          <h3 className="text-lg font-display font-bold">Update profile photo</h3>
+          <button onClick={onCancel} disabled={uploading} className="p-2 hover:bg-gray-100 rounded-full min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+        {!srcDataUrl ? (
+          <div className="p-6 space-y-4">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100 bg-gray-50">
+                <img
+                  src={trainer.photoUrl || getTrainerImagePath(trainer.name)}
+                  alt={trainer.name}
+                  className="w-full h-full object-cover object-top"
+                  onError={(e) => { (e.target as HTMLImageElement).src = SKELLY_PATH; }}
+                />
+              </div>
+              <p className="text-sm font-bold">{trainer.name}</p>
+            </div>
+            <label className="cursor-pointer block w-full border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
+              <Upload size={20} className="mx-auto text-eqc-green mb-2" />
+              <span className="text-sm font-bold text-eqc-green">Choose a photo</span>
+              <p className="text-xs text-eqc-muted mt-1">JPEG or PNG, up to ~10MB</p>
+              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onCancel} className="px-4 py-2.5 min-h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative h-[50vh] sm:h-80 bg-gray-100 shrink-0">
+              <Cropper
+                image={srcDataUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                cropShape="round"
+              />
+            </div>
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-500 shrink-0">Zoom</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.05}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="flex-1 accent-eqc-green"
+                  aria-label="Zoom"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSrcDataUrl(null)}
+                  disabled={uploading}
+                  className="px-4 py-2.5 min-h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                >
+                  Pick different
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={uploading}
+                  className="px-6 py-2.5 min-h-[44px] text-sm font-bold text-white bg-eqc-green rounded-lg hover:bg-eqc-green/90 flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Check size={16} /> {uploading ? 'Uploading…' : 'Save photo'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Edit Break Modal ---
+
+interface EditBreakModalProps {
+  room: RoomAllocation;
+  onCancel: () => void;
+  onSave: (newMinutesFromNow: number) => Promise<void>;
+}
+
+function EditBreakModal({ room, onCancel, onSave }: EditBreakModalProps) {
+  const initialRemaining = useMemo(() => {
+    if (!room.breakUntil) return 15;
+    const remainingMin = Math.max(0, Math.round((new Date(room.breakUntil).getTime() - Date.now()) / 60000));
+    return remainingMin || 15;
+  }, [room.breakUntil]);
+  const [minutes, setMinutes] = useState<string>(String(initialRemaining));
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    const n = parseInt(minutes, 10);
+    if (isNaN(n) || n <= 0) {
+      toast.error('Enter a positive number of minutes');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave(n);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+        <div className="p-5 border-b">
+          <h3 className="text-lg font-bold flex items-center gap-2"><Clock size={20} className="text-amber-600" /> Edit break time</h3>
+          <p className="text-sm text-eqc-muted mt-1">{room.trainer} · {room.roomName}</p>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">
+              Minutes from now
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={480}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              className="w-full p-3 min-h-[48px] border border-gray-200 rounded-lg text-base"
+              autoFocus
+            />
+            <p className="text-xs text-eqc-muted mt-1">Currently ends in {initialRemaining} minute{initialRemaining === 1 ? '' : 's'}.</p>
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={onCancel} disabled={submitting} className="px-4 py-2.5 min-h-[44px] text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-50">Cancel</button>
+            <button onClick={handleSave} disabled={submitting} className="px-6 py-2.5 min-h-[44px] text-sm font-bold text-white bg-eqc-green rounded-lg hover:bg-eqc-green/90 disabled:opacity-50">
+              {submitting ? 'Saving…' : 'Update break'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -255,6 +499,8 @@ export default function TrainerSignOn() {
     room: RoomAllocation;
     payload: { trainerName: string; trainerId?: string; roomNumber: string; course: string; intake: string; topic: string };
   } | null>(null);
+  const [photoTarget, setPhotoTarget] = useState<Trainer | null>(null);
+  const [editBreakTarget, setEditBreakTarget] = useState<RoomAllocation | null>(null);
 
   // Auto-expire breaks
   useEffect(() => {
@@ -410,6 +656,31 @@ export default function TrainerSignOn() {
     }
   };
 
+  const handleEndBreak = async (room: RoomAllocation) => {
+    const roomNum = parseInt(room.roomName.replace('Room ', ''));
+    const roomId = (!isNaN(roomNum) && roomNum >= 1 && roomNum <= 6) ? roomNum : room.id;
+    try {
+      await setDoc(doc(db, 'rooms', `room_${roomId}`), { ...room, status: 'live', breakUntil: null }, { merge: true });
+      toast.success(`${room.trainer || 'Trainer'} back from break`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to end break');
+    }
+  };
+
+  const handleEditBreak = async (newMinutesFromNow: number) => {
+    if (!editBreakTarget) return;
+    const breakUntil = new Date(Date.now() + newMinutesFromNow * 60_000).toISOString();
+    const roomNum = parseInt(editBreakTarget.roomName.replace('Room ', ''));
+    const roomId = (!isNaN(roomNum) && roomNum >= 1 && roomNum <= 6) ? roomNum : editBreakTarget.id;
+    try {
+      await setDoc(doc(db, 'rooms', `room_${roomId}`), { ...editBreakTarget, status: 'break', breakUntil }, { merge: true });
+      toast.success(`Break updated to ${newMinutesFromNow} min`);
+      setEditBreakTarget(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update break');
+    }
+  };
+
   const handleOverride = async () => {
     if (!overrideTarget) return;
     try {
@@ -463,6 +734,9 @@ export default function TrainerSignOn() {
                   trainers={trainers}
                   onBreak={() => setBreakTarget(room)}
                   onSignOff={() => setSignOffTarget(room)}
+                  onUpdatePhoto={(t) => setPhotoTarget(t)}
+                  onEndBreak={(r) => handleEndBreak(r)}
+                  onEditBreak={(r) => setEditBreakTarget(r)}
                 />
               ))}
             </div>
@@ -632,6 +906,22 @@ export default function TrainerSignOn() {
           onConfirm={handleOverride}
           confirmLabel="Override"
           confirmClass="bg-amber-600 hover:bg-amber-700"
+        />
+      )}
+
+      {photoTarget && (
+        <PhotoModal
+          trainer={photoTarget}
+          onCancel={() => setPhotoTarget(null)}
+          onSaved={() => setPhotoTarget(null)}
+        />
+      )}
+
+      {editBreakTarget && (
+        <EditBreakModal
+          room={editBreakTarget}
+          onCancel={() => setEditBreakTarget(null)}
+          onSave={handleEditBreak}
         />
       )}
     </div>
