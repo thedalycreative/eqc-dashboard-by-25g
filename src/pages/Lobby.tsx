@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock,
@@ -19,11 +19,14 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 
-import type { RoomAllocation, Event, Announcement } from '../lib/types';
+import type { RoomAllocation, Event, Announcement, Trainer } from '../lib/types';
 import { getTrainerImagePath } from '../lib/trainers';
-import { useRooms, useEvents, useAnnouncements, useCarousel, useGlobalSettings, useAutoReset } from '../lib/hooks';
+import { useRooms, useEvents, useAnnouncements, useCarousel, useGlobalSettings, useAutoReset, useTrainers } from '../lib/hooks';
 import { useRssTicker } from '../lib/rss';
 import { Rss } from 'lucide-react';
+
+const MOBILE_REDIRECT_DISMISSED_KEY = 'eqc-mobile-redirect-dismissed';
+const FLOORPLAN_VERSION = 'v5';
 
 const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 const TRAINER_SIGN_ON_URL = `${import.meta.env.BASE_URL}trainer-sign-on.html`;
@@ -116,12 +119,16 @@ function formatBreakRemaining(breakUntil?: string): string | null {
   return minutes === 1 ? '1 min' : `${minutes} min`;
 }
 
-const RoomItem = ({ room }: { room: RoomAllocation }) => {
+const RoomItem = ({ room, trainers }: { room: RoomAllocation; trainers: Trainer[] }) => {
   const isLive = room.status === 'live';
   const isBreak = room.status === 'break';
   const isInactive = room.status === 'inactive';
   const hasContent = isLive || isBreak || isInactive;
-  const trainerImg = getTrainerImagePath(room.trainer);
+  const matchedTrainer = useMemo(
+    () => trainers.find(t => t.name.toLowerCase() === (room.trainer || '').toLowerCase()),
+    [trainers, room.trainer]
+  );
+  const trainerImg = matchedTrainer?.photoUrl || getTrainerImagePath(room.trainer);
   const [, forceTick] = useState(0);
 
   useEffect(() => {
@@ -481,7 +488,7 @@ const FloorPlan = () => {
         <h2 className="text-lg font-display font-bold">Campus Map</h2>
       </div>
       <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center">
-        <img src="/images/eqc-perth-youarehere-v5.png" alt="Campus Floor Plan" className="w-full h-full object-cover scale-110" referrerPolicy="no-referrer" />
+        <img src={`/images/eqc-perth-youarehere-v5.png?${FLOORPLAN_VERSION}`} alt="Campus Floor Plan" className="w-full h-full object-cover scale-110" referrerPolicy="no-referrer" />
         <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full border border-white shadow-sm">
             <span className="text-xs font-bold text-eqc-text uppercase tracking-widest">Level 1 - West Perth</span>
@@ -585,17 +592,99 @@ const AnnouncementBanner = ({ announcements }: { announcements: Announcement[] }
   );
 };
 
+// --- Mobile Redirect Modal ---
+
+const MobileRedirectModal = ({ onDismiss }: { onDismiss: () => void }) => {
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex items-center justify-center p-5">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden">
+        <a
+          href="/admin"
+          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-eqc-muted transition-colors"
+          aria-label="Open admin panel"
+        >
+          {/* Hand-coded cog SVG */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </a>
+        <div className="p-7 text-center">
+          <div className="mx-auto w-14 h-14 rounded-full bg-eqc-green/10 flex items-center justify-center mb-4">
+            <img src="/images/eqc-logo.png" alt="EQC" className="h-9 w-auto object-contain" />
+          </div>
+          <h2 className="text-xl font-display font-bold text-eqc-text mb-2 leading-tight">
+            Best viewed on desktop
+          </h2>
+          <p className="text-sm text-eqc-muted leading-relaxed mb-6">
+            The campus dashboard is built for the lobby screen. On a phone, head to the trainer sign-on portal for the mobile-friendly view.
+          </p>
+          <a
+            href="/trainer-sign-on.html"
+            className="block w-full bg-eqc-green text-white font-bold rounded-xl px-5 py-3 text-base hover:bg-eqc-green/90 transition-colors mb-3"
+          >
+            Go to mobile site
+          </a>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="block w-full text-xs text-eqc-muted hover:text-eqc-text font-medium underline-offset-2 hover:underline transition-colors"
+          >
+            View dashboard anyway (not recommended on mobile)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Lobby Page ---
+
+function useFluidRootFontSize() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.fontSize;
+    root.style.fontSize = 'clamp(11px, 0.85vw, 13px)';
+    return () => { root.style.fontSize = prev; };
+  }, []);
+}
+
+function useIsMobileViewport(): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 768px)').matches;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
 
 export default function Lobby() {
   const navigate = useNavigate();
   const [rooms] = useRooms(INITIAL_ROOMS);
   const [events] = useEvents(IS_DEMO_MODE ? DEMO_EVENTS : []);
   const announcements = useAnnouncements();
+  const trainers = useTrainers();
   const [settings] = useGlobalSettings();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isMobile = useIsMobileViewport();
+  const [showMobileModal, setShowMobileModal] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem(MOBILE_REDIRECT_DISMISSED_KEY) !== 'ok';
+  });
 
+  useFluidRootFontSize();
   useAutoReset(settings.resetTimeHour);
+
+  const dismissMobileModal = () => {
+    sessionStorage.setItem(MOBILE_REDIRECT_DISMISSED_KEY, 'ok');
+    setShowMobileModal(false);
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -636,7 +725,7 @@ export default function Lobby() {
             </div>
 
             <div className="flex-1 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 pb-2">
-              {rooms.map((room) => <RoomItem key={room.id} room={room} />)}
+              {rooms.map((room) => <RoomItem key={room.id} room={room} trainers={trainers} />)}
             </div>
           </div>
 
@@ -663,6 +752,10 @@ export default function Lobby() {
       <RssTicker />
 
       <Footer onAdmin={() => navigate('/admin')} />
+
+      {isMobile && showMobileModal && (
+        <MobileRedirectModal onDismiss={dismissMobileModal} />
+      )}
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }

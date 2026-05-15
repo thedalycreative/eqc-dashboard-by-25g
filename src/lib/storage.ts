@@ -54,11 +54,17 @@ export function readFileAsDataURL(file: File): Promise<string> {
 /**
  * Crops a source image (data URL) to the given pixel area and returns a Blob.
  * Used after react-easy-crop returns crop coordinates.
+ *
+ * Signature is overloaded: pass a single `outputSize` for a square crop, or
+ * `outputWidth, outputHeight` for a rectangular crop. An optional `rotation`
+ * (degrees) is applied around the source-image centre before cropping.
  */
 export async function getCroppedBlob(
   imageSrc: string,
   crop: { x: number; y: number; width: number; height: number },
-  outputSize = 512
+  outputWidth: number = 512,
+  outputHeight?: number,
+  rotation: number = 0
 ): Promise<Blob> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
@@ -68,23 +74,56 @@ export async function getCroppedBlob(
     img.src = imageSrc;
   });
 
+  const destW = outputWidth;
+  const destH = outputHeight ?? outputWidth;
+
   const canvas = document.createElement('canvas');
-  canvas.width = outputSize;
-  canvas.height = outputSize;
+  canvas.width = destW;
+  canvas.height = destH;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas context unavailable');
 
-  ctx.drawImage(
-    image,
-    crop.x,
-    crop.y,
-    crop.width,
-    crop.height,
-    0,
-    0,
-    outputSize,
-    outputSize
-  );
+  if (rotation) {
+    // Render the source image into a rotated working canvas, then crop from it.
+    const radians = (rotation * Math.PI) / 180;
+    const sin = Math.abs(Math.sin(radians));
+    const cos = Math.abs(Math.cos(radians));
+    const rotatedW = image.width * cos + image.height * sin;
+    const rotatedH = image.width * sin + image.height * cos;
+
+    const work = document.createElement('canvas');
+    work.width = rotatedW;
+    work.height = rotatedH;
+    const wctx = work.getContext('2d');
+    if (!wctx) throw new Error('Canvas context unavailable');
+    wctx.translate(rotatedW / 2, rotatedH / 2);
+    wctx.rotate(radians);
+    wctx.drawImage(image, -image.width / 2, -image.height / 2);
+
+    ctx.drawImage(
+      work,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      0,
+      0,
+      destW,
+      destH
+    );
+  } else {
+    ctx.drawImage(
+      image,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      0,
+      0,
+      destW,
+      destH
+    );
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
