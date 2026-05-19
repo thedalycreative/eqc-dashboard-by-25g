@@ -85,12 +85,9 @@ const Header = () => {
   return (
     <header className="bg-white border-b border-gray-100 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm">
       <div className="flex items-center gap-6">
-        <img
-          src="/images/eqc-logo.png"
-          alt="EQC Institute"
-          className="h-14 w-auto object-contain"
-          referrerPolicy="no-referrer"
-        />
+        <div className="w-14 h-14 bg-eqc-green rounded-xl flex items-center justify-center shrink-0">
+          <GraduationCap size={32} className="text-white" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold serif text-eqc-text tracking-tight leading-none">Welcome to Equinim College</h1>
           <p className="text-lg text-eqc-muted font-medium mt-1">Perth Campus</p>
@@ -581,12 +578,15 @@ const AnnouncementBanner = ({ announcements }: { announcements: Announcement[] }
   return (
     <div className="shrink-0 relative z-[60] border-b border-white/10">
       {announcements.map((ann) => {
-        const bg = ann.color || 'bg-eqc-green';
-        const txt = ann.textColor || 'text-white';
+        const bgHex = ann.bgColor || (ann.color?.startsWith('#') ? ann.color : undefined);
+        const bgClass = !bgHex ? (ann.color || 'bg-eqc-green') : '';
+        const txtHex = ann.textColor?.startsWith('#') ? ann.textColor : undefined;
+        const txtClass = !txtHex ? (ann.textColor || 'text-white') : '';
         const sizeClass = SIZE_CLASSES[ann.textSize || 'md'];
         const duration = SPEED_DURATIONS[ann.scrollSpeed || 'medium'];
         return (
-          <div key={ann.id} className={`${bg} ${txt} overflow-hidden py-2`}>
+          <div key={ann.id} className={`${bgClass} ${txtClass} overflow-hidden py-2`}
+            style={{ ...(bgHex ? { backgroundColor: bgHex } : {}), ...(txtHex ? { color: txtHex } : {}) }}>
             <div
               className="flex whitespace-nowrap items-center gap-16 animate-marquee"
               style={{ animationDuration: `${duration}s` }}
@@ -634,28 +634,34 @@ const MobileRedirectModal = ({ onDismiss }: { onDismiss: () => void }) => {
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </a>
-        <div className="p-7 text-center">
-          <div className="mx-auto w-14 h-14 rounded-full bg-eqc-green/10 flex items-center justify-center mb-4">
-            <img src="/images/eqc-logo.png" alt="EQC" className="h-9 w-auto object-contain" />
+        <div className="p-6 sm:p-7 text-center">
+          <div className="mx-auto w-14 h-14 bg-eqc-green rounded-2xl flex items-center justify-center mb-4">
+            <GraduationCap size={28} className="text-white" />
           </div>
-          <h2 className="text-xl font-display font-bold text-eqc-text mb-2 leading-tight">
+          <h2 className="text-xl font-bold text-eqc-text mb-2 leading-tight">
             Best viewed on desktop
           </h2>
           <p className="text-sm text-eqc-muted leading-relaxed mb-6">
-            The campus dashboard is built for the lobby screen. On a phone, head to the trainer sign-on portal for the mobile-friendly view.
+            The campus dashboard is built for the lobby screen. On a phone, use the mobile companion view instead.
           </p>
           <a
-            href="/trainer-sign-on.html"
-            className="block w-full bg-eqc-green text-white font-bold rounded-xl px-5 py-3 text-base hover:bg-eqc-green/90 transition-colors mb-3"
+            href="/mobile"
+            className="block w-full bg-eqc-green text-white font-bold rounded-xl px-5 py-3.5 text-base hover:bg-eqc-green/90 transition-colors mb-3"
           >
-            Go to mobile site
+            Open Mobile View
+          </a>
+          <a
+            href="/trainer-sign-on"
+            className="block w-full bg-gray-100 text-gray-700 font-bold rounded-xl px-5 py-3 text-sm hover:bg-gray-200 transition-colors mb-3"
+          >
+            Trainer Sign-On Portal
           </a>
           <button
             type="button"
             onClick={onDismiss}
             className="block w-full text-xs text-eqc-muted hover:text-eqc-text font-medium underline-offset-2 hover:underline transition-colors"
           >
-            View dashboard anyway (not recommended on mobile)
+            View dashboard anyway
           </button>
         </div>
       </div>
