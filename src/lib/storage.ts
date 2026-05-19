@@ -64,7 +64,9 @@ export async function getCroppedBlob(
   crop: { x: number; y: number; width: number; height: number },
   outputWidth: number = 512,
   outputHeight?: number,
-  rotation: number = 0
+  rotation: number = 0,
+  format: 'jpeg' | 'webp' = 'jpeg',
+  quality: number = 0.9
 ): Promise<Blob> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
@@ -125,11 +127,12 @@ export async function getCroppedBlob(
     );
   }
 
+  const mimeType = format === 'webp' ? 'image/webp' : 'image/jpeg';
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('Canvas toBlob returned null'))),
-      'image/jpeg',
-      0.9
+      mimeType,
+      quality
     );
   });
 }
