@@ -14,6 +14,9 @@ import {
   Train,
   CalendarDaysIcon,
   MapPinCheckInside,
+  Shield,
+  GraduationCap,
+  Wifi,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -58,6 +61,7 @@ const DEMO_EVENTS: Event[] = [
 
 const Header = () => {
   const [time, setTime] = useState(new Date());
+  const [settings] = useGlobalSettings();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -91,6 +95,18 @@ const Header = () => {
           <h1 className="text-2xl font-bold serif text-eqc-text tracking-tight leading-none">Welcome to Equinim College</h1>
           <p className="text-lg text-eqc-muted font-medium mt-1">Perth Campus</p>
         </div>
+        {settings.wifiSsid && (
+          <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+            <Wifi size={14} className="text-eqc-green" />
+            <span className="text-xs font-bold text-eqc-muted">{settings.wifiSsid}</span>
+            {settings.wifiPassword && (
+              <>
+                <div className="w-px h-3 bg-gray-300 mx-1" />
+                <span className="text-xs text-eqc-muted">{settings.wifiPassword}</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-3 text-right shrink min-w-0">
         <Forecast7Widget />
@@ -514,7 +530,10 @@ const Footer = ({ onAdmin }: { onAdmin: () => void }) => {
   return (
     <footer className="bg-white border-t border-gray-100 px-6 py-1.5 flex justify-between items-center text-[11px] text-eqc-muted shrink-0">
       <div className="flex items-center gap-6">
-        <div className="font-bold tracking-wide">RTO 45758 · CRICOS 03952E</div>
+        <div className="font-bold tracking-wide flex items-center gap-3">
+          <span className="flex items-center gap-1"><Shield size={12} className="text-eqc-green" />RTO 45758</span>
+          <span className="flex items-center gap-1"><GraduationCap size={12} className="text-eqc-green" />CRICOS 03952E</span>
+        </div>
         <div className="flex items-center gap-1.5">
           <MapPin size={12} className="text-red-500" />
           <span className="font-medium">2 Gordon St, West Perth WA 6005</span>
