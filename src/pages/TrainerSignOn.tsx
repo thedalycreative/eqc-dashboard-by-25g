@@ -710,16 +710,17 @@ export default function TrainerSignOn() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Toaster position="bottom-center" />
 
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-4">
-          <img src="/images/eqc-logo.png" alt="EQC Institute" className="h-12 w-auto object-contain" />
-          <div className="h-8 w-px bg-gray-300" />
-          <h1 className="text-xl font-display font-bold text-gray-800">Trainer Sign-On Portal</h1>
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex justify-between items-center shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-eqc-green rounded-lg flex items-center justify-center shrink-0">
+            <Check size={20} className="text-white" />
+          </div>
+          <h1 className="text-lg font-bold text-gray-800">Trainer Sign-On</h1>
         </div>
-        <span className="text-sm text-gray-500 font-medium">{today}</span>
+        <span className="text-xs text-gray-500 font-medium hidden sm:block">{today}</span>
       </header>
 
-      <main className="flex-1 p-6 max-w-3xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-4 sm:p-6 max-w-2xl w-full mx-auto space-y-5">
         {/* Currently signed-on */}
         {signedOnRooms.length > 0 && (
           <section>
@@ -745,12 +746,12 @@ export default function TrainerSignOn() {
 
         {/* Sign-on form */}
         <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-          <div className="bg-eqc-green text-white p-5 text-center">
-            <h2 className="text-lg font-display font-bold">Sign on for class</h2>
-            <p className="text-sm opacity-90">Your sign-on updates the lobby board in real time.</p>
+          <div className="bg-eqc-green text-white px-4 py-3 text-center">
+            <h2 className="text-base font-bold">Sign on for class</h2>
+            <p className="text-xs opacity-90">Updates the lobby board in real time.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
             {/* Trainer dropdown */}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Your name *</label>
@@ -876,9 +877,9 @@ export default function TrainerSignOn() {
           </form>
         </section>
 
-        <div className="text-center pt-2">
-          <a href="/" className="text-xs text-gray-500 hover:text-eqc-green inline-flex items-center gap-1">
-            <ExternalLink size={12} /> Back to lobby dashboard
+        <div className="flex justify-center gap-4 pt-2">
+          <a href="/" className="text-xs text-gray-500 hover:text-eqc-green inline-flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-gray-100">
+            <ExternalLink size={14} /> Lobby
           </a>
         </div>
       </main>

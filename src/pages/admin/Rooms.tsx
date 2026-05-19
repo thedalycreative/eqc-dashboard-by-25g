@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Layout, Plus, X, Trash2, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Layout, Plus, X, Trash2, ExternalLink, CheckCircle, AlertCircle, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useRooms } from '../../lib/hooks';
+import { useRooms, useTrainers } from '../../lib/hooks';
 import type { RoomAllocation } from '../../lib/types';
 
 const TRAINER_SIGN_ON_URL = `${import.meta.env.BASE_URL}trainer-sign-on.html`;
@@ -19,13 +19,60 @@ const INITIAL_ROOMS: RoomAllocation[] = [
 
 type StatusMsg = { text: string; type: 'success' | 'error' } | null;
 
+function AutocompleteInput({ value, onChange, suggestions, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions: string[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = useMemo(() =>
+    query ? suggestions.filter(s => s.toLowerCase().includes(query.toLowerCase())) : suggestions
+  , [query, suggestions]);
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+          {filtered.map(s => (
+            <button key={s} type="button" onClick={() => { onChange(s); setQuery(s); setOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 truncate">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminRooms() {
   const [rooms] = useRooms(INITIAL_ROOMS);
+  const trainers = useTrainers();
   const [draftRooms, setDraftRooms] = useState<RoomAllocation[]>(rooms);
   const [statusMessage, setStatusMessage] = useState<StatusMsg>(null);
   const [dirty, setDirty] = useState(false);
 
-  // Keep draft in sync when external updates come in AND we don't have unsaved changes.
   useEffect(() => {
     if (!dirty) setDraftRooms(rooms);
   }, [rooms, dirty]);
@@ -37,14 +84,34 @@ export default function AdminRooms() {
     }
   }, [statusMessage]);
 
+  const trainerNames = useMemo(() => trainers.filter(t => t.active).map(t => t.name), [trainers]);
+  const existingCourses = useMemo(() => {
+    const courses = new Set<string>();
+    rooms.forEach(r => { if (r.course) courses.add(r.course); });
+    return Array.from(courses);
+  }, [rooms]);
+
   const updateDraft = (idx: number, field: keyof RoomAllocation, value: string) => {
     setDirty(true);
     setDraftRooms(prev => {
       const next = [...prev];
       (next[idx] as any)[field] = value || undefined;
       if (field === 'status' && value === 'available') {
-        next[idx] = { ...next[idx], course: undefined, trainer: undefined, intake: undefined, topic: undefined };
+        next[idx] = { ...next[idx], course: undefined, trainer: undefined, intake: undefined, topic: undefined, breakUntil: undefined };
       }
+      if ((field === 'course' || field === 'trainer') && value && next[idx].status === 'available') {
+        next[idx] = { ...next[idx], status: 'live' };
+      }
+      return next;
+    });
+  };
+
+  const setBreakMinutes = (idx: number, minutes: number) => {
+    setDirty(true);
+    setDraftRooms(prev => {
+      const next = [...prev];
+      const until = new Date(Date.now() + minutes * 60_000).toISOString();
+      next[idx] = { ...next[idx], breakUntil: until };
       return next;
     });
   };
@@ -79,7 +146,7 @@ export default function AdminRooms() {
   };
 
   const handleResetAll = async () => {
-    const reset = rooms.map(r => ({ ...r, status: 'available' as const, course: undefined, trainer: undefined, intake: undefined, topic: undefined }));
+    const reset = rooms.map(r => ({ ...r, status: 'available' as const, course: undefined, trainer: undefined, intake: undefined, topic: undefined, breakUntil: undefined }));
     await persist(reset);
     setDraftRooms(reset);
     setDirty(false);
@@ -88,14 +155,14 @@ export default function AdminRooms() {
 
   const handleAddRoom = () => {
     setDirty(true);
-    setDraftRooms(prev => [...prev, { id: Date.now(), roomName: 'New Room', status: 'available' }]);
+    setDraftRooms(prev => [...prev, { id: Date.now(), roomName: `Room ${prev.length + 1}`, status: 'available' }]);
   };
 
   const handleClearRoom = (idx: number) => {
     setDirty(true);
     setDraftRooms(prev => {
       const next = [...prev];
-      next[idx] = { ...next[idx], status: 'available', course: undefined, trainer: undefined, intake: undefined, topic: undefined };
+      next[idx] = { ...next[idx], status: 'available', course: undefined, trainer: undefined, intake: undefined, topic: undefined, breakUntil: undefined };
       return next;
     });
   };
@@ -107,26 +174,26 @@ export default function AdminRooms() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-2xl font-bold serif flex items-center gap-3">
             <Layout size={26} className="text-eqc-green" />
             Manage Room Allocations
           </h2>
-          <p className="text-sm text-eqc-muted mt-1">Changes save when you press Save. Trainer sign-ons still update rooms automatically.</p>
+          <p className="text-sm text-eqc-muted mt-1">Start typing a course or trainer name to activate a room. Changes save when you press Save.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={handleResetAll} className="bg-orange-50 text-orange-600 px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-orange-100 transition-colors">
-            <X size={18} /> Reset All
+          <button onClick={handleResetAll} className="bg-orange-50 text-orange-600 px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-orange-100 transition-colors text-sm">
+            <X size={16} /> Reset All
           </button>
-          <button onClick={handleAddRoom} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors">
-            <Plus size={18} /> Add Room
+          <button onClick={handleAddRoom} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-gray-200 transition-colors text-sm">
+            <Plus size={16} /> Add Room
           </button>
         </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-        <div className="grid grid-cols-[80px_110px_1fr_1fr_90px_1fr_70px] gap-2 px-3 py-2 bg-gray-100 border-b border-gray-200 text-[10px] font-black uppercase tracking-wider text-eqc-muted">
+        <div className="hidden md:grid grid-cols-[60px_100px_1fr_1fr_80px_1fr_70px] gap-2 px-3 py-2 bg-gray-100 border-b border-gray-200 text-[10px] font-black uppercase tracking-wider text-eqc-muted">
           <span>Room</span>
           <span>Status</span>
           <span>Course</span>
@@ -138,47 +205,57 @@ export default function AdminRooms() {
         {draftRooms.map((room, idx) => {
           const num = parseInt(room.roomName.replace('Room ', ''));
           const isCoreRoom = !isNaN(num) && num >= 1 && num <= 6;
+          const displayName = isCoreRoom ? String(num) : room.roomName;
           return (
-            <div
-              key={room.id}
-              className={`grid grid-cols-[80px_110px_1fr_1fr_90px_1fr_70px] gap-2 px-3 py-2 items-center border-b border-gray-100 last:border-b-0 ${
+            <div key={room.id}>
+              <div className={`grid grid-cols-2 md:grid-cols-[60px_100px_1fr_1fr_80px_1fr_70px] gap-2 px-3 py-2 items-center border-b border-gray-100 last:border-b-0 ${
                 room.status === 'live' ? 'bg-green-50' : room.status === 'break' ? 'bg-orange-50' : 'bg-white'
-              }`}
-            >
-              <input
-                value={room.roomName}
-                readOnly={isCoreRoom}
-                onChange={(e) => updateDraft(idx, 'roomName', e.target.value)}
-                className={`w-full px-2 py-1.5 border border-gray-200 rounded text-sm font-bold ${isCoreRoom ? 'bg-gray-50 border-transparent cursor-not-allowed' : 'bg-white'}`}
-              />
-              <select
-                value={room.status}
-                onChange={(e) => updateDraft(idx, 'status', e.target.value)}
-                className={`w-full px-2 py-1.5 border border-gray-200 rounded text-xs font-bold ${
-                  room.status === 'live' ? 'text-green-700' : room.status === 'break' ? 'text-orange-700' : 'text-gray-600'
-                }`}
-              >
-                <option value="available">Available</option>
-                <option value="live">Live</option>
-                <option value="break">Break</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <input value={room.course || ''} onChange={(e) => updateDraft(idx, 'course', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
-              <input value={room.trainer || ''} onChange={(e) => updateDraft(idx, 'trainer', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
-              <input value={room.intake || ''} onChange={(e) => updateDraft(idx, 'intake', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
-              <input value={room.topic || ''} onChange={(e) => updateDraft(idx, 'topic', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
-              <div className="flex justify-end gap-1">
-                {room.status !== 'available' && (
-                  <button onClick={() => handleClearRoom(idx)} className="text-orange-500 p-1.5 hover:bg-orange-100 rounded" title="Clear Room">
-                    <X size={16} />
-                  </button>
-                )}
-                {!isCoreRoom && (
-                  <button onClick={() => handleDeleteRoom(room.id)} className="text-red-500 p-1.5 hover:bg-red-50 rounded" title="Delete Room">
-                    <Trash2 size={16} />
-                  </button>
-                )}
+              }`}>
+                <div className="font-bold text-center text-lg md:text-sm">{displayName}</div>
+                <select
+                  value={room.status}
+                  onChange={(e) => updateDraft(idx, 'status', e.target.value)}
+                  className={`w-full px-2 py-1.5 border border-gray-200 rounded text-xs font-bold ${
+                    room.status === 'live' ? 'text-green-700' : room.status === 'break' ? 'text-orange-700' : room.status === 'inactive' ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  <option value="available">Available</option>
+                  <option value="live">Live</option>
+                  <option value="break">Break</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <AutocompleteInput value={room.course || ''} onChange={(v) => updateDraft(idx, 'course', v)} suggestions={existingCourses} placeholder="Course" />
+                <AutocompleteInput value={room.trainer || ''} onChange={(v) => updateDraft(idx, 'trainer', v)} suggestions={trainerNames} placeholder="Trainer" />
+                <input value={room.intake || ''} onChange={(e) => updateDraft(idx, 'intake', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
+                <input value={room.topic || ''} onChange={(e) => updateDraft(idx, 'topic', e.target.value)} placeholder="—" className="w-full px-2 py-1.5 border border-gray-200 rounded text-sm bg-white" />
+                <div className="flex justify-end gap-1">
+                  {room.status !== 'available' && (
+                    <button onClick={() => handleClearRoom(idx)} className="text-orange-500 p-1.5 hover:bg-orange-100 rounded" title="Clear Room">
+                      <X size={16} />
+                    </button>
+                  )}
+                  {!isCoreRoom && (
+                    <button onClick={() => handleDeleteRoom(room.id)} className="text-red-500 p-1.5 hover:bg-red-50 rounded" title="Delete Room">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
+              {room.status === 'break' && (
+                <div className="px-3 py-2 bg-orange-50 border-b border-orange-100 flex items-center gap-3">
+                  <Coffee size={14} className="text-orange-500" />
+                  <span className="text-xs font-bold text-orange-700">Break duration:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    defaultValue={15}
+                    onChange={(e) => setBreakMinutes(idx, Number(e.target.value))}
+                    className="w-20 px-2 py-1 border border-orange-200 rounded text-sm text-center"
+                  />
+                  <span className="text-xs text-orange-600">minutes</span>
+                </div>
+              )}
             </div>
           );
         })}
@@ -192,7 +269,6 @@ export default function AdminRooms() {
         </p>
       </div>
 
-      {/* Save bar */}
       <div className="sticky bottom-0 bg-white border-t border-gray-200 -mx-6 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
           {dirty ? (

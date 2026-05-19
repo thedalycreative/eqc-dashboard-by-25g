@@ -11,7 +11,7 @@ import type { CarouselItem } from '../../lib/types';
 
 // Carousel tile on the lobby is rendered with `aspect-video` (16:9).
 const CAROUSEL_ASPECT = 16 / 9;
-const CAROUSEL_OUTPUT_WIDTH = 1600;
+const CAROUSEL_OUTPUT_WIDTH = 1920;
 
 // Hand-coded inline SVGs for crop controls.
 const RotateIcon = ({ size = 16 }: { size?: number }) => (
@@ -92,10 +92,12 @@ export default function AdminCarousel() {
         croppedAreaPixels,
         CAROUSEL_OUTPUT_WIDTH,
         outputHeight,
-        rotation
+        rotation,
+        'webp',
+        0.8
       );
       const id = `carousel_${Date.now()}`;
-      const path = `carousel/${id}.jpg`;
+      const path = `carousel/${id}.webp`;
       const imageUrl = await uploadImage(blob, path);
       await setDoc(doc(db, 'carousel', id), {
         id,
@@ -159,7 +161,7 @@ export default function AdminCarousel() {
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-display font-bold flex items-center gap-3">
+          <h2 className="text-2xl font-bold serif flex items-center gap-3">
             <ImageIcon size={26} className="text-eqc-green" />
             Campus Life Carousel
           </h2>

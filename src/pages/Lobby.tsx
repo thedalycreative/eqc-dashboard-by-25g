@@ -14,7 +14,9 @@ import {
   Train,
   CalendarDaysIcon,
   MapPinCheckInside,
-  CogIcon,
+  Shield,
+  GraduationCap,
+  Wifi,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -59,6 +61,7 @@ const DEMO_EVENTS: Event[] = [
 
 const Header = () => {
   const [time, setTime] = useState(new Date());
+  const [settings] = useGlobalSettings();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -82,21 +85,30 @@ const Header = () => {
   return (
     <header className="bg-white border-b border-gray-100 px-6 py-3 flex justify-between items-center shrink-0 shadow-sm">
       <div className="flex items-center gap-6">
-        <img
-          src="/images/eqc-logo.png"
-          alt="EQC Institute"
-          className="h-14 w-auto object-contain"
-          referrerPolicy="no-referrer"
-        />
+        <div className="w-14 h-14 bg-eqc-green rounded-xl flex items-center justify-center shrink-0">
+          <GraduationCap size={32} className="text-white" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold serif text-eqc-text tracking-tight leading-none">Welcome to Equinim College</h1>
           <p className="text-lg text-eqc-muted font-medium mt-1">Perth Campus</p>
         </div>
+        {settings.wifiSsid && (
+          <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+            <Wifi size={14} className="text-eqc-green" />
+            <span className="text-xs font-bold text-eqc-muted">{settings.wifiSsid}</span>
+            {settings.wifiPassword && (
+              <>
+                <div className="w-px h-3 bg-gray-300 mx-1" />
+                <span className="text-xs text-eqc-muted">{settings.wifiPassword}</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
-      <div className="flex items-center gap-4 text-right">
+      <div className="flex items-center gap-3 text-right shrink min-w-0">
         <Forecast7Widget />
-        <div className="flex items-center gap-4 bg-gray-50 px-5 h-14 rounded-xl border border-gray-100">
-          <span className="text-sm font-bold text-eqc-muted tracking-tight">{formattedDate}</span>
+        <div className="flex items-center gap-3 bg-gray-50 px-4 h-14 rounded-xl border border-gray-100 shrink-0">
+          <span className="text-sm font-bold text-eqc-muted tracking-tight whitespace-nowrap">{formattedDate}</span>
           <div className="w-px h-8 bg-gray-300" />
           <div className="flex items-baseline gap-1 w-[130px] justify-end tabular-nums">
             <span className="text-2xl font-bold text-eqc-text tracking-tight leading-none tabular-nums">{formattedTime.split(' ')[0]}</span>
@@ -148,7 +160,7 @@ const RoomItem = ({ room, trainers }: { room: RoomAllocation; trainers: Trainer[
         ${isLive ? 'bg-eqc-green text-white shadow-xl' : isBreak ? 'bg-orange-500 text-white shadow-lg' : isInactive ? 'bg-gray-300 text-gray-500 shadow-sm' : 'bg-white border border-gray-100 shadow-sm'}
       `}
     >
-      <div className="flex flex-row items-center gap-4">
+      <div className="flex flex-row items-center gap-3">
         <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
           isLive ? 'bg-white/20' : isBreak ? 'bg-white/20' : isInactive ? 'bg-gray-200' : 'bg-gray-100'
         }`}>
@@ -156,14 +168,14 @@ const RoomItem = ({ room, trainers }: { room: RoomAllocation; trainers: Trainer[
         </div>
         {hasContent && room.trainer ? (
           <>
-            <div className={`w-10 h-10 rounded-full overflow-hidden border-2 shrink-0 bg-white ${isInactive ? 'border-gray-200' : 'border-white/40'}`}>
+            <div className={`w-[3.5rem] h-[3.5rem] rounded-full overflow-hidden border-[3px] shrink-0 bg-white ${isInactive ? 'border-gray-200' : 'border-white/40'}`}>
               <img src={trainerImg} alt={room.trainer} className="w-full h-full object-cover object-top" />
             </div>
-            <span className="font-sans font-semibold text-xl leading-none">{room.trainer}</span>
+            <span className="font-sans font-bold text-3xl leading-none">{room.trainer}</span>
           </>
         ) : isBreak ? (
           <>
-            <Coffee size={22} />
+            <Coffee size={24} />
             <span className="font-sans font-semibold text-xl leading-none italic">On Break</span>
           </>
         ) : (
@@ -294,8 +306,8 @@ const Forecast7Widget = () => {
     const a = document.createElement('a');
     a.className = 'weatherwidget-io';
     a.href = 'https://forecast7.com/en/n31d95115d86/perth/';
-    a.setAttribute('data-label_1', 'PERTH');
-    a.setAttribute('data-label_2', 'Weather');
+    a.setAttribute('data-label_1', '');
+    a.setAttribute('data-label_2', '');
     a.setAttribute('data-theme', 'pure');
     a.setAttribute('data-days', '3');
     a.setAttribute('data-highcolor', '#1a7a54');
@@ -308,7 +320,7 @@ const Forecast7Widget = () => {
     script.src = 'https://weatherwidget.io/js/widget.min.js';
     document.body.appendChild(script);
   }, []);
-  return <div ref={ref} className="overflow-hidden rounded-2xl" style={{ width: 320, height: 80 }} />;
+  return <div ref={ref} className="overflow-hidden rounded-xl h-14 w-[min(320px,25vw)] shrink-0" />;
 };
 
 // --- Campus Map ---
@@ -391,16 +403,16 @@ const CampusLifeCarousel = () => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden h-full flex flex-col">
-      <div className="flex-1 relative bg-gray-50 min-h-0">
+      <div className="flex-1 relative bg-gray-50 min-h-0 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.img
             key={current.id}
             src={current.imageUrl}
             alt={current.caption || 'Campus life'}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0 }}
+            transition={{ duration: 1, ease: 'easeInOut' }}
             className="absolute inset-0 w-full h-full object-cover"
           />
         </AnimatePresence>
@@ -437,7 +449,7 @@ const RssTicker = () => {
   const duration = RSS_SCROLL_DURATIONS[settings.rssScrollSpeed] || RSS_SCROLL_DURATIONS.medium;
 
   return (
-    <div className="bg-eqc-bg/95 backdrop-blur-sm border-t border-white/10 text-white py-2 overflow-hidden shrink-0 group">
+    <div className="backdrop-blur-sm border-t border-white/10 text-white py-2 overflow-hidden shrink-0 group" style={{ backgroundColor: settings.rssRibbonColor || '#1a3a2a' }}>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 shrink-0 px-4 border-r border-white/20">
           <Rss size={14} className="text-eqc-green" />
@@ -494,8 +506,15 @@ const FloorPlan = () => {
         <MapPinCheckInside size={18} className="text-eqc-green" />
         <h2 className="text-lg font-display font-bold">Campus Map</h2>
       </div>
-      <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center group">
-        <img src={`/images/eqc-campus-layout.png?${FLOORPLAN_VERSION}`} alt="Campus Floor Plan" className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110" referrerPolicy="no-referrer" />
+      <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 relative flex items-center justify-center">
+        <img src={`/images/eqc-campus-layout.png?${FLOORPLAN_VERSION}`} alt="Campus Floor Plan" className="w-full h-full object-cover animate-float" referrerPolicy="no-referrer" />
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
+          .animate-float { animation: float 4s ease-in-out infinite; }
+        `}</style>
       </div>
     </div>
   );
@@ -508,8 +527,9 @@ const Footer = ({ onAdmin }: { onAdmin: () => void }) => {
   return (
     <footer className="bg-white border-t border-gray-100 px-6 py-1.5 flex justify-between items-center text-[11px] text-eqc-muted shrink-0">
       <div className="flex items-center gap-6">
-        <div className="bg-white border border-gray-200 rounded p-1 shrink-0">
-          <QRCodeSVG value={mobileUrl} size={36} />
+        <div className="font-bold tracking-wide flex items-center gap-3">
+          <span className="flex items-center gap-1"><Shield size={12} className="text-eqc-green" />RTO 45758</span>
+          <span className="flex items-center gap-1"><GraduationCap size={12} className="text-eqc-green" />CRICOS 03952E</span>
         </div>
         <div className="flex items-center gap-1.5">
           <MapPin size={12} className="text-red-500" />
@@ -532,16 +552,16 @@ const Footer = ({ onAdmin }: { onAdmin: () => void }) => {
           <span className="font-medium">Fire Assembly: Coolgardie St</span>
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <div className="font-bold tracking-wide">RTO 45758 · CRICOS 03952E</div>
-        <button
-          onClick={onAdmin}
-          className="bg-eqc-green text-white p-1.5 rounded-full text-md font-light hover:bg-eqc-green/90 active:scale-95 transition-colors"
-          aria-label="Admin panel"
-        >
-          <CogIcon size={18} />
-        </button>
-      </div>
+      <button
+        onClick={onAdmin}
+        className="flex items-center gap-2 shrink-0"
+        aria-label="Admin panel"
+      >
+        <span className="text-[10px] text-eqc-muted font-medium leading-tight">Scan for<br />mobile version</span>
+        <div className="bg-white border border-gray-200 rounded p-1 shrink-0">
+          <QRCodeSVG value={mobileUrl} size={44} />
+        </div>
+      </button>
     </footer>
   );
 };
@@ -558,12 +578,15 @@ const AnnouncementBanner = ({ announcements }: { announcements: Announcement[] }
   return (
     <div className="shrink-0 relative z-[60] border-b border-white/10">
       {announcements.map((ann) => {
-        const bg = ann.color || 'bg-eqc-green';
-        const txt = ann.textColor || 'text-white';
+        const bgHex = ann.bgColor || (ann.color?.startsWith('#') ? ann.color : undefined);
+        const bgClass = !bgHex ? (ann.color || 'bg-eqc-green') : '';
+        const txtHex = ann.textColor?.startsWith('#') ? ann.textColor : undefined;
+        const txtClass = !txtHex ? (ann.textColor || 'text-white') : '';
         const sizeClass = SIZE_CLASSES[ann.textSize || 'md'];
         const duration = SPEED_DURATIONS[ann.scrollSpeed || 'medium'];
         return (
-          <div key={ann.id} className={`${bg} ${txt} overflow-hidden py-2`}>
+          <div key={ann.id} className={`${bgClass} ${txtClass} overflow-hidden py-2`}
+            style={{ ...(bgHex ? { backgroundColor: bgHex } : {}), ...(txtHex ? { color: txtHex } : {}) }}>
             <div
               className="flex whitespace-nowrap items-center gap-16 animate-marquee"
               style={{ animationDuration: `${duration}s` }}
@@ -611,28 +634,34 @@ const MobileRedirectModal = ({ onDismiss }: { onDismiss: () => void }) => {
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </a>
-        <div className="p-7 text-center">
-          <div className="mx-auto w-14 h-14 rounded-full bg-eqc-green/10 flex items-center justify-center mb-4">
-            <img src="/images/eqc-logo.png" alt="EQC" className="h-9 w-auto object-contain" />
+        <div className="p-6 sm:p-7 text-center">
+          <div className="mx-auto w-14 h-14 bg-eqc-green rounded-2xl flex items-center justify-center mb-4">
+            <GraduationCap size={28} className="text-white" />
           </div>
-          <h2 className="text-xl font-display font-bold text-eqc-text mb-2 leading-tight">
+          <h2 className="text-xl font-bold text-eqc-text mb-2 leading-tight">
             Best viewed on desktop
           </h2>
           <p className="text-sm text-eqc-muted leading-relaxed mb-6">
-            The campus dashboard is built for the lobby screen. On a phone, head to the trainer sign-on portal for the mobile-friendly view.
+            The campus dashboard is built for the lobby screen. On a phone, use the mobile companion view instead.
           </p>
           <a
-            href="/trainer-sign-on.html"
-            className="block w-full bg-eqc-green text-white font-bold rounded-xl px-5 py-3 text-base hover:bg-eqc-green/90 transition-colors mb-3"
+            href="/mobile"
+            className="block w-full bg-eqc-green text-white font-bold rounded-xl px-5 py-3.5 text-base hover:bg-eqc-green/90 transition-colors mb-3"
           >
-            Go to mobile site
+            Open Mobile View
+          </a>
+          <a
+            href="/trainer-sign-on"
+            className="block w-full bg-gray-100 text-gray-700 font-bold rounded-xl px-5 py-3 text-sm hover:bg-gray-200 transition-colors mb-3"
+          >
+            Trainer Sign-On Portal
           </a>
           <button
             type="button"
             onClick={onDismiss}
             className="block w-full text-xs text-eqc-muted hover:text-eqc-text font-medium underline-offset-2 hover:underline transition-colors"
           >
-            View dashboard anyway (not recommended on mobile)
+            View dashboard anyway
           </button>
         </div>
       </div>
